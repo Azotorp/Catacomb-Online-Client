@@ -7,6 +7,8 @@ $homedir = explode("/lib/config",__DIR__);
 define("HOMEDIR",$homedir[0]);
 define("DOMAINNAME", "domain.com");
 define("WEBPATH","/"); // relative to the domain name root. Must start and end with a slash unless there is no subfolder, then use "/"
+define("SOCKET_IO_HOST", "localhost");
+define("SOCKET_IO_PORT", "3000");
 define("SERVER_SQL_HOST", "localhost");
 define("SERVER_SQL_USER", "user");
 define("SERVER_SQL_PASS", "pass");

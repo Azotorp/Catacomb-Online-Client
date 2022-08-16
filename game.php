@@ -68,22 +68,16 @@ if ($auth < $access_levels["Member"])
 <body>
 <span class="offline" style="display: none">Sorry server is offline.</span>
 <div id="frame"></div>
+<script src="js/socket.io.min.js"></script>
 <script src="js/jquery.min.js"></script>
-<script src="js/p2.min.js"></script>
 <script src="js/pixi-core-6.5.1.min.js"></script>
 <script src="js/pixi-filters-4.1.6.js"></script>
 <script src="js/pixi-input-1.0.1-min.js"></script>
 <script src="js/pixi-layers-1.0.11.umd.js"></script>
 <script src="js/pixi-sound-4.2.0.js"></script>
 <script src="js/crypto-js.min.js"></script>
-<script src="mpGame/misc.js"></script>
-<script src="mpGame/keyBindings.js"></script>
-<!-- ul id="messages"></ul>
-<form id="form" action="">
-    <input id="nickname" value=""><br>
-    <input id="input" autocomplete="off" /><button>Send</button>
-</form -->
-<script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
+<script src="game/misc.js"></script>
+<script src="game/keyBindings.js"></script>
 <script>
     const playerScale = <?php echo $settings["playerScale"]; ?>;
     const realWorldScale = 0.00761461306 / playerScale; // meters per pixel
@@ -97,8 +91,10 @@ if ($auth < $access_levels["Member"])
     const AUTH_USERID = <?php echo $authuserid; ?>;
     const AUTH_KEY = "<?php echo $authkey; ?>";
     const AUTH_IP = "<?php echo $authIP; ?>";
+    const socketIOHost = "<?php echo SOCKET_IO_HOST; ?>";
+    const socketIOPort = "<?php echo SOCKET_IO_PORT; ?>";
     let uuid;
-    let socket = io("wss://zombie-server.vzotorp.com:3010");
+    let socket = io("wss://" + socketIOHost + ":" + socketIOPort);
     let mapData = [];
 
     let sha256 = function(input)
