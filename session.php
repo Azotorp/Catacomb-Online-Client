@@ -43,7 +43,7 @@ if ($jsonData && $gen == 1)
 if ($do == "getJsonData")
 {
     $binding = array(":id", $authuserid);
-    $data = sqlqry2($sql, "select * from `cloud_save` where `user_id` = :id", $binding);
+    $data = sqlqry2($serverSQL, "select * from `cloud_save` where `user_id` = :id", $binding);
     if ($data)
     {
         echo json_encode(array("jsonData" => base64_encode($data["jsonData"]), "jsonDataKey" => $data["jsonDataKey"]));
@@ -55,7 +55,7 @@ if ($do == "getJsonData")
 if ($do == "setJsonData")
 {
     $binding = array(":id", $authuserid);
-    $data = sqlqry($sql, "select * from `cloud_save` where `user_id` = :id", $binding);
+    $data = sqlqry($serverSQL, "select * from `cloud_save` where `user_id` = :id", $binding);
     $binding = array(
         array(":id", $authuserid),
         array(":jsonData", base64_decode($jsonData)),
@@ -63,10 +63,10 @@ if ($do == "setJsonData")
     );
     if ($data)
     {
-        sqlexe($sql, "UPDATE `cloud_save` SET `jsonData` = :jsonData, `jsonDataKey` = :jsonDataKey WHERE `user_id` = :id", $binding);
+        sqlexe($serverSQL, "UPDATE `cloud_save` SET `jsonData` = :jsonData, `jsonDataKey` = :jsonDataKey WHERE `user_id` = :id", $binding);
         echo json_encode(array("result" => "updated"));
     } else {
-        sqlexe($sql, "INSERT INTO `cloud_save` (`user_id`, `jsonData`, `jsonDataKey`) VALUES (:id, :jsonData, :jsonDataKey)", $binding);
+        sqlexe($serverSQL, "INSERT INTO `cloud_save` (`user_id`, `jsonData`, `jsonDataKey`) VALUES (:id, :jsonData, :jsonDataKey)", $binding);
         echo json_encode(array("result" => "inserted"));
     }
 }

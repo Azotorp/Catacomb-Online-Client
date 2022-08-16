@@ -61,8 +61,8 @@ if ($_SERVER['HTTP_HOST'] != FULLDOMAIN && !$cli)
     exit;
 }
 require(HOMEDIR."/lib/sql/sql.php");
-$serverSql = new sql(SERVER_SQL_HOST, SERVER_SQL_USER, SERVER_SQL_PASS, SERVER_SQL_DB);
-$clientSql = new sql(CLIENT_SQL_HOST, CLIENT_SQL_USER, CLIENT_SQL_PASS, CLIENT_SQL_DB);
+$serverSQL = new sql(SERVER_SQL_HOST, SERVER_SQL_USER, SERVER_SQL_PASS, SERVER_SQL_DB);
+$clientSQL = new sql(CLIENT_SQL_HOST, CLIENT_SQL_USER, CLIENT_SQL_PASS, CLIENT_SQL_DB);
 
 
 
@@ -73,7 +73,7 @@ require(HOMEDIR."/lib/functions/discord.php");
 $access_levelids = array();
 $access_levels = array();
 
-$authLvlData = sqlqry($sql, "select * from `access_levels` order by `level`");
+$authLvlData = sqlqry($serverSQL, "select * from `access_levels` order by `level`");
 if ($authLvlData)
 {
     foreach ($authLvlData as $lvls)
@@ -94,7 +94,7 @@ if (THISPAGE != "logout")
 
 
 $settings = array();
-$settings_data = sqlqry($sql, "select * from `settings`");
+$settings_data = sqlqry($serverSQL, "select * from `settings`");
 if ($settings_data)
 {
     foreach ($settings_data as $s)

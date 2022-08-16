@@ -4,12 +4,12 @@ if (!defined("THISPAGE")) {
 }
 function getdiscordauth($userid, $sid, $ip)
 {
-    global $sql, $access_levels;
+    global $serverSQL, $access_levels;
     $binding = array(
         array(":userid", $userid),
         array(":sid", $sid),
     );
-    $checkuser = sqlqry2($sql, "select * from `user_auth` where `user_id` = :userid and `user_auth_key` = :sid", $binding);
+    $checkuser = sqlqry2($serverSQL, "select * from `user_auth` where `user_id` = :userid and `user_auth_key` = :sid", $binding);
     $auth = 0;
     if ($checkuser)
     {
@@ -32,7 +32,7 @@ function getdiscordauth($userid, $sid, $ip)
             array(":time", time()),
             array(":userauth", $discord_user_auth_key),
         );
-        sqlexe($sql, "UPDATE `user_auth` SET `username` = :username, `discriminator` = :discrim, `access_token` = :access, `user_auth_key` = :userauth, `discord_avatar` = :avatar, `last_ip` = :ip, `last_login` = :time WHERE `user_id` = :userid", $binding);
+        sqlexe($serverSQL, "UPDATE `user_auth` SET `username` = :username, `discriminator` = :discrim, `access_token` = :access, `user_auth_key` = :userauth, `discord_avatar` = :avatar, `last_ip` = :ip, `last_login` = :time WHERE `user_id` = :userid", $binding);
         $_SESSION["avatar_uri"] = "https://cdn.discordapp.com/avatars/".$_SESSION['user_id']."/".$_SESSION['user_avatar'].is_animated($_SESSION['user_avatar']);
         $auth = (isset($access_levels[$access_level])) ? $access_levels[$access_level] : 0;
     }
@@ -41,7 +41,7 @@ function getdiscordauth($userid, $sid, $ip)
 
 function verifyauthkey($level,$user,$userid,$key)
 {
-    global $sql, $access_levelids;
+    global $serverSQL, $access_levelids;
     if (!$user || !$level || !$key || !$userid)
         return false;
     $user = explode("#", $user);
@@ -51,7 +51,7 @@ function verifyauthkey($level,$user,$userid,$key)
         array(":id", $userid),
     );
     $username = $user[0]."#".$user[1];
-    $sid = sqlqry2($sql, "select `user_auth_key` from `user_auth` where `user_id` = :id and `access_level` = :level", $binding);
+    $sid = sqlqry2($serverSQL, "select `user_auth_key` from `user_auth` where `user_id` = :id and `access_level` = :level", $binding);
     if ($sid)
     {
         if ($key != sha1($level.SECRETSALT.$username.SECRETSALT.$userid.SECRETSALT.$sid))

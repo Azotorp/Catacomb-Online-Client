@@ -37,7 +37,7 @@ if (!isset($_SESSION['user']))
     $discord_avatar = $_SESSION["user_avatar"];
     $discord_user_auth_key = $_SESSION['user_auth_key'];
     $binding = array(":userid", $discord_user_id);
-    $user_auth = sqlqry($sql, "select * from `user_auth` where `user_id` = :userid", $binding);
+    $user_auth = sqlqry($serverSQL, "select * from `user_auth` where `user_id` = :userid", $binding);
     if ($user_auth)
     {
         $binding = array(
@@ -50,7 +50,7 @@ if (!isset($_SESSION['user']))
             array(":time", time()),
             array(":userauth", $discord_user_auth_key),
         );
-        sqlexe($sql, "UPDATE `user_auth` SET `username` = :username, `discriminator` = :discrim, `access_token` = :access, `user_auth_key` = :userauth, `discord_avatar` = :avatar, `last_ip` = :ip, `last_login` = :time WHERE `user_id` = :userid", $binding);
+        sqlexe($serverSQL, "UPDATE `user_auth` SET `username` = :username, `discriminator` = :discrim, `access_token` = :access, `user_auth_key` = :userauth, `discord_avatar` = :avatar, `last_ip` = :ip, `last_login` = :time WHERE `user_id` = :userid", $binding);
     } else {
         $binding = array(
             array(":userid", $discord_user_id),
@@ -62,7 +62,7 @@ if (!isset($_SESSION['user']))
             array(":time", time()),
             array(":userauth", $discord_user_auth_key),
         );
-        sqlexe($sql, "INSERT INTO `user_auth` (`user_id`, `username`, `discriminator`, `access_token`, `user_auth_key`, `discord_avatar`, `last_ip`, `last_login`) VALUES (:userid, :username, :discrim, :access, :userauth, :avatar, :ip, :time)", $binding);
+        sqlexe($serverSQL, "INSERT INTO `user_auth` (`user_id`, `username`, `discriminator`, `access_token`, `user_auth_key`, `discord_avatar`, `last_ip`, `last_login`) VALUES (:userid, :username, :discrim, :access, :userauth, :avatar, :ip, :time)", $binding);
     }
     setval("authusername", $discord_tag, MAXAUTOLOGIN * 24 * 3600);
     setval("authsid", $discord_user_auth_key, MAXAUTOLOGIN * 24 * 3600);
