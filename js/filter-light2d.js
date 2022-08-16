@@ -1,0 +1,9 @@
+/*!
+ * @amoy/filter-light2d - v3.0.21
+ * Compiled Thu, 21 Nov 2019 07:47:39 UTC
+ *
+ * @amoy/filter-light2d is licensed under the MIT License.
+ * http://www.opensource.org/licenses/mit-license
+ */
+var __filters=function(o,t){"use strict";var r="attribute vec2 aVertexPosition;\nattribute vec2 aTextureCoord;\n\nuniform mat3 projectionMatrix;\n\nvarying vec2 vTextureCoord;\n\nvoid main(void)\n{\n    gl_Position = vec4((projectionMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);\n    vTextureCoord = aTextureCoord;\n}",e="varying vec2 vTextureCoord;//passed from vect shader \n\nuniform vec4 filterArea;\nuniform sampler2D uSampler;// 2d texture\n\nuniform float uPosx;\nuniform float uPosy;\n\nvoid main(void)\n{\nvec2 uv=vTextureCoord;\n\nvec3 col=texture2D(uSampler,uv).xyz;\n\nvec2 fragCoord=vTextureCoord*filterArea.xy;\n\nfloat lightY=0.1*filterArea.y;\n\nvec3 lightPos=vec3(uPosx,lightY,uPosy);\n\nvec3 lightDir=lightPos-vec3(fragCoord.x,0.,fragCoord.y);\n\nfloat diffuse=max(dot(normalize(lightDir),vec3(0.,1.,0.)),0.);\n\ngl_FragColor=vec4(col,1.)*diffuse;\n\n}",n=function(o){function t(t,n){void 0===t&&(t=10),void 0===n&&(n=10),o.call(this,r,e),this.posx=t,this.posy=n}o&&(t.__proto__=o),t.prototype=Object.create(o&&o.prototype),t.prototype.constructor=t;var n={posx:{configurable:!0},posy:{configurable:!0}};return t.prototype.apply=function(o,t,r,e){this.uniforms.uPosx=this.posx<=0?10:this.posx,this.uniforms.uPosy=this.posy<=0?10:this.posy,o.applyFilter(this,t,r,e)},n.posx.get=function(){return this.uniforms.uPosx},n.posx.set=function(o){this.uniforms.uPosx=o},n.posy.get=function(){return this.uniforms.uPosy},n.posy.set=function(o){this.uniforms.uPosy=o},Object.defineProperties(t.prototype,n),t}(t.Filter);return o.AmoyLight2dFilter=n,o}({},PIXI);Object.assign(PIXI.filters,__filters);
+//# sourceMappingURL=filter-light2d.js.map
