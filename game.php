@@ -393,9 +393,20 @@ if ($auth < $access_levels["Member"])
 
         if (!setupLoaded)
         {
-            Loader.add("wall", "images/walls/plain/wall.png");
-            Loader.add("floor", "images/floors/plain/floor.png");
+            Loader.add("wall", "images/map/wall.png");
+            Loader.add("floor", "images/map/floor.png");
             Loader.add("player","images/player/player.json");
+            Loader.add("crossroadOverlay", "images/map/overlay/crossroad.png");
+            Loader.add("deadEndOverlay", "images/map/overlay/deadEnd.png");
+            Loader.add("floorCornerOverlay", "images/map/overlay/floorCorner.png");
+            Loader.add("hollowBoxOverlay", "images/map/overlay/hollowBox.png");
+            Loader.add("sideOverlay", "images/map/overlay/side.png");
+            Loader.add("sideCornerAOverlay", "images/map/overlay/sideCornerA.png");
+            Loader.add("sideCornerBOverlay", "images/map/overlay/sideCornerB.png");
+            Loader.add("straightOverlay", "images/map/overlay/straight.png");
+            Loader.add("tJuncOverlay", "images/map/overlay/tJunc.png");
+            Loader.add("turnOverlay", "images/map/overlay/turn.png");
+            Loader.add("wallCornerOverlay", "images/map/overlay/wallCorner.png");
             Loader.onProgress.add(loadinginfo);
             Loader.load(setup);
         } else {

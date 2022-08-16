@@ -4,20 +4,20 @@ if (!defined("THISPAGE")) {
 }
 class sql
 {
-    private $driver = SQL_DRIVER;
     public $sqlcnt = 0;
     public $sqltrace = "";
     private $stmt;
     private $dbh;
     private $error;
-    public $debug = SQL_DEBUG;
 
-    public function __construct($host, $user, $pass, $dbname)
+    public function __construct($host, $user, $pass, $dbname, $driver = "mysql", $debug = false)
     {
         $this->host = $host;
         $this->user = $user;
         $this->pass = $pass;
         $this->dbname = $dbname;
+        $this->driver = $driver;
+        $this->debug = $debug;
         $dsn = $this->driver . ':host=' . $this->host . ';dbname=' . $this->dbname . ";charset=utf8mb4";
         $options = array(
             PDO::ATTR_PERSISTENT => true,
