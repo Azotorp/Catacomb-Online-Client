@@ -95,7 +95,7 @@ if ($auth < $access_levels["Member"])
     const socketIOPort = "<?php echo SOCKET_IO_PORT; ?>";
     let uuid;
     let socket = io("wss://" + socketIOHost + ":" + socketIOPort);
-    let mapData = [];
+    let mapData = {};
 
     let sha256 = function(input)
     {
@@ -288,22 +288,30 @@ if ($auth < $access_levels["Member"])
                 {
                     if (isDefined(players[playerID]))
                     {
+                        for (let i in mapData)
+                        {
+                            if (mapData[i].chunkRendered)
+                            {
+                                mapData[i].chunkRendered = false;
+                            }
+                        }
+
                         let playerChunkPos = {x: players[playerID].chunkPos[0], y: players[playerID].chunkPos[1]};
                         let foundTile = [];
-                        let foundTileId = [];
+                        //let foundTileId = [];
+                        //for (let sy = -1; sy <= 1; sy++)
                         for (let sy = -maxChunkRenderY; sy <= maxChunkRenderY; sy++)
                         {
+                            //for (let sx = -1; sx <= 1; sx++)
                             for (let sx = -maxChunkRenderX; sx <= maxChunkRenderX; sx++)
                             {
-                                let filter = [];
-                                let tilesFilter = function(obj) {
-                                    return obj.chunkPosX === playerChunkPos.x + sx && obj.chunkPosY === playerChunkPos.y + sy;
-                                }
-                                filter = mapData.filter(tilesFilter);
-                                if (filter.length > 0)
+                                let x = playerChunkPos.x + sx;
+                                let y = playerChunkPos.y + sy;
+                                if (isDefined(mapData[getXYKey({x: x, y: y})]))
                                 {
-                                    foundTile.push(filter[0]);
-                                    foundTileId.push(filter[0].id);
+                                    let tile = mapData[getXYKey({x: x, y: y})];
+                                    foundTile.push(tile);
+                                    //foundTileId.push(getXYKey({x: x, y: y}));
                                 }
                             }
                         }
@@ -312,8 +320,10 @@ if ($auth < $access_levels["Member"])
                         {
                             for (let i in foundTile)
                             {
+                                mapData[foundTile[i].xyKey].chunkRendered = true;
                                 let id = foundTile[i].id;
                                 let tileType = foundTile[i].tile;
+
                                 if (tileType === "floor")
                                 {
                                     if (!isDefined(gameObject.floor[id]))
@@ -326,24 +336,22 @@ if ($auth < $access_levels["Member"])
                                 }
                             }
                         }
-
-
-                        let noTilesFilter = function(obj) {
-                            return foundTileId.indexOf(obj.id) === -1;
-                        }
-                        let notFoundFilter = mapData.filter(noTilesFilter);
-                        if (notFoundFilter.length > 0)
+                        let deRenderTile = [];
+                        for (let i in mapData)
                         {
-                            for (let i in notFoundFilter)
+                            if (!mapData[i].chunkRendered)
                             {
-                                let id = notFoundFilter[i].id;
-                                let tileType = notFoundFilter[i].tile;
+                                let id = mapData[i].id;
+                                let tileType = mapData[i].tile;
+
                                 if (tileType === "floor")
                                 {
                                     if (isDefined(gameObject.floor[id]))
                                     {
                                         gameObject.floorLayer.removeChild(gameObject.floor[id]);
                                         delete gameObject.floor[id];
+                                        mapData[i].chunkLoaded = false;
+                                        deRenderTile.push(i);
                                     }
                                 }
                                 if (tileType === "wall")
@@ -352,10 +360,13 @@ if ($auth < $access_levels["Member"])
                                     {
                                         gameObject.wallLayer.removeChild(gameObject.wall[id]);
                                         delete gameObject.wall[id];
+                                        mapData[i].chunkLoaded = false;
+                                        deRenderTile.push(i);
                                     }
                                 }
                             }
                         }
+                        socket.emit("deRenderMap", deRenderTile);
                     }
                 }
             }
@@ -465,7 +476,6 @@ if ($auth < $access_levels["Member"])
     });
 
     socket.on('newPlayer', function(data) {
-        mapData = data.mapData;
         let playerData = data.playerData;
         let id = playerData.playerID;
         if (!isDefined(gameObject.player[id]))
@@ -578,7 +588,6 @@ if ($auth < $access_levels["Member"])
             func: "up",
             id: id,
         });
-        dump("Pos: "+players[playerID].chunkPos[0]+":"+players[playerID].chunkPos[1]);
     }
 
     function down()
