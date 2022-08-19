@@ -77,6 +77,7 @@ if ($auth < $access_levels["Member"])
 <script src="js/pixi-sound-4.2.0.js"></script>
 <script src="js/crypto-js.min.js"></script>
 <script src="game/misc.js"></script>
+<script src="game/drawFunc.js"></script>
 <script src="game/keyBindings.js"></script>
 <script>
     const playerScale = <?php echo $settings["playerScale"]; ?>;
@@ -96,6 +97,60 @@ if ($auth < $access_levels["Member"])
     let uuid;
     let socket = io("wss://" + socketIOHost + ":" + socketIOPort);
     let mapData = {};
+
+    const debugHudTextStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontStyle: 'normal',
+        fontWeight: 'bold',
+        fill: ['#0bbbc6', '#0aadb7'], // gradient
+        stroke: '#088d96',
+        strokeThickness: 1,
+        dropShadow: true,
+        dropShadowColor: '#000000',
+        dropShadowBlur: 1,
+        dropShadowAngle: Math.PI / 6,
+        dropShadowDistance: 3,
+        wordWrap: false,
+        wordWrapWidth: 440,
+        lineJoin: 'round',
+    });
+
+    const debugWallHudTextStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontStyle: 'normal',
+        fontWeight: 'bold',
+        fill: ['#0761c6', '#0761c6'], // gradient
+        stroke: '#0761c6',
+        strokeThickness: 1,
+        dropShadow: true,
+        dropShadowColor: '#000000',
+        dropShadowBlur: 1,
+        dropShadowAngle: Math.PI / 6,
+        dropShadowDistance: 3,
+        wordWrap: false,
+        wordWrapWidth: 440,
+        lineJoin: 'round',
+    });
+
+    const debugFloorHudTextStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontStyle: 'normal',
+        fontWeight: 'bold',
+        fill: ['#6ac618', '#6ac618'], // gradient
+        stroke: '#6ac618',
+        strokeThickness: 1,
+        dropShadow: true,
+        dropShadowColor: '#000000',
+        dropShadowBlur: 1,
+        dropShadowAngle: Math.PI / 6,
+        dropShadowDistance: 3,
+        wordWrap: false,
+        wordWrapWidth: 440,
+        lineJoin: 'round',
+    });
 
     let sha256 = function(input)
     {
@@ -155,6 +210,7 @@ if ($auth < $access_levels["Member"])
     let zoomMulti = 1.5, minZoom = 0, maxZoom = 12; // < 0 = zoom in
     let zoomStep = 0;
     let zoom = pow(zoomMulti, zoomStep);
+    let localMousePos, worldMousePos;
 
     let maxChunkRenderX = Math.ceil(((winCenterX * zoom) - (gridSize / 2)) / gridSize) + 1;
     let maxChunkRenderY = Math.ceil(((winCenterY * zoom) - (gridSize / 2)) / gridSize) + 1;
@@ -164,11 +220,20 @@ if ($auth < $access_levels["Member"])
         playerSheet: {},
         floor: {},
         wall: {},
+        debugPlayerHud: {},
+        debugWallHud: {},
+        debugFloorHud: {},
         referencePlayer: {},
         worldLayer: new Container(),
         floorLayer: new Container(),
         wallLayer: new Container(),
         playerLayer: new Container(),
+        debugWorldHudLayer: new Container(),
+        debugWallHudLayer: new Container(),
+        debugFloorHudLayer: new Container(),
+        debugPlayerHudLayer: {},
+        wallGrid: {},
+        floorGrid: {},
     }
 
 
@@ -190,6 +255,9 @@ if ($auth < $access_levels["Member"])
     gameObject.worldLayer.addChild(gameObject.floorLayer);
     gameObject.worldLayer.addChild(gameObject.wallLayer);
     gameObject.worldLayer.addChild(gameObject.playerLayer);
+    gameObject.worldLayer.addChild(gameObject.debugWorldHudLayer);
+    gameObject.debugWorldHudLayer.addChild(gameObject.debugFloorHudLayer);
+    gameObject.debugWorldHudLayer.addChild(gameObject.debugWallHudLayer);
 
 
     let serverOfflineErrorView = false;
@@ -228,6 +296,8 @@ if ($auth < $access_levels["Member"])
         gameObject.referencePlayer.scale.y = -playerScale;
 
 
+
+
         loadKeyBindings();
         state = play;
         Ticker.add(delta => gameLoop(delta));
@@ -256,8 +326,8 @@ if ($auth < $access_levels["Member"])
         gamedelta = delta;
         frameTickTime = Ticker.elapsedMS;
         FPS = 1000 / frameTickTime;
-        let localMousePos = App.renderer.plugins.interaction.mouse.global;
-        let worldMousePos = App.stage.toLocal(localMousePos);
+        localMousePos = App.renderer.plugins.interaction.mouse.global;
+        worldMousePos = App.stage.toLocal(localMousePos);
         if (isDefined(players))
         {
             for (let id in players)
@@ -267,6 +337,8 @@ if ($auth < $access_levels["Member"])
                     gameObject.player[id].x = players[id].body.position[0];
                     gameObject.player[id].y = players[id].body.position[1];
                     gameObject.player[id].rotation = players[id].body.angle;
+                    drawText(gameObject.debugPlayerHud[id], players[id].chunkPos[0]+" : "+players[id].chunkPos[1], false, true);
+                    gameObject.debugPlayerHudLayer[id].position = gameObject.player[id].position;
                 } else {
                     createPlayer(id);
                 }
@@ -278,13 +350,7 @@ if ($auth < $access_levels["Member"])
                     App.stage.pivot.x = gameObject.player[playerID].x;
                     App.stage.pivot.y = gameObject.player[playerID].y;
                 }
-            }
-        }
-        if (isDefined(players))
-        {
-            if (isDefined(mapData))
-            {
-                if (playerID !== false)
+                if (isDefined(mapData))
                 {
                     if (isDefined(players[playerID]))
                     {
@@ -321,18 +387,30 @@ if ($auth < $access_levels["Member"])
                             for (let i in foundTile)
                             {
                                 mapData[foundTile[i].xyKey].chunkRendered = true;
-                                let id = foundTile[i].id;
+                                let id = foundTile[i].xyKey;
                                 let tileType = foundTile[i].tile;
 
                                 if (tileType === "floor")
                                 {
                                     if (!isDefined(gameObject.floor[id]))
+                                    {
+                                        if (isDefined(gameObject.wall[id]))
+                                        {
+                                            deleteWall(id);
+                                        }
                                         createFloor(id, {x: foundTile[i].chunkPosX, y: foundTile[i].chunkPosY});
+                                    }
                                 }
                                 if (tileType === "wall")
                                 {
                                     if (!isDefined(gameObject.wall[id]))
+                                    {
+                                        if (isDefined(gameObject.floor[id]))
+                                        {
+                                            deleteFloor(id);
+                                        }
                                         createWall(id, {x: foundTile[i].chunkPosX, y: foundTile[i].chunkPosY});
+                                    }
                                 }
                             }
                         }
@@ -341,7 +419,7 @@ if ($auth < $access_levels["Member"])
                         {
                             if (!mapData[i].chunkRendered)
                             {
-                                let id = mapData[i].id;
+                                let id = i;
                                 let tileType = mapData[i].tile;
 
                                 if (tileType === "floor")
@@ -366,21 +444,24 @@ if ($auth < $access_levels["Member"])
                                 }
                             }
                         }
-                        socket.emit("deRenderMap", deRenderTile);
+                        socket.emit("deRenderMap", {
+                            deRenderTile: deRenderTile,
+                            playerID: playerID,
+                        });
                     }
                 }
+                socket.emit("updateServer", {
+                    id: playerID,
+                    mouse: worldMousePos,
+                    fps: FPS,
+                    frameTickTime: frameTickTime,
+                    winCenterX: winCenterX,
+                    winCenterY: winCenterY,
+                    worldZoom: zoom,
+                });
             }
         }
-        //dump(mapData);
-        socket.emit("updateServer", {
-            id: playerID,
-            mouse: worldMousePos,
-            fps: FPS,
-            frameTickTime: frameTickTime,
-            winCenterX: winCenterX,
-            winCenterY: winCenterY,
-            zoom: zoom,
-        });
+
     }
 
     socket.on("connect_error", function (msg) {
@@ -442,6 +523,22 @@ if ($auth < $access_levels["Member"])
 
     socket.on("disconnect", function(msg) {
         dump(msg);
+        if (isDefined(gameObject.debugPlayerHud))
+        {
+            for (let id in gameObject.debugPlayerHud)
+            {
+                gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
+                delete gameObject.debugPlayerHud[id];
+            }
+        }
+        if (isDefined(gameObject.debugPlayerHudLayer))
+        {
+            for (let id in gameObject.debugPlayerHudLayer)
+            {
+                gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
+                delete gameObject.debugPlayerHudLayer[id];
+            }
+        }
         if (isDefined(gameObject.player))
         {
             for (let id in gameObject.player)
@@ -497,8 +594,12 @@ if ($auth < $access_levels["Member"])
 
     socket.on('userDisconnect', function(data) {
         let id = data.playerID;
+        gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
+        gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
         gameObject.playerLayer.removeChild(gameObject.player[id]);
         delete gameObject.player[id];
+        delete gameObject.debugPlayerHudLayer[id];
+        delete gameObject.debugPlayerHud[id];
         players = data.players;
     });
 
@@ -524,12 +625,25 @@ if ($auth < $access_levels["Member"])
             gameObject.player[id].scale.x = playerScale;
             gameObject.player[id].scale.y = -playerScale;
             gameObject.player[id].uuid = players[id].uuid;
+            gameObject.debugPlayerHudLayer[id] = new Container();
+
+            gameObject.debugPlayerHud[id] = new Text("", debugHudTextStyle);
+            gameObject.debugPlayerHud[id].scale.x = 1;
+            gameObject.debugPlayerHud[id].scale.y = -1;
+            gameObject.debugPlayerHud[id].anchor.x = 0.5;
+            gameObject.debugPlayerHud[id].anchor.y = 0.5;
+            gameObject.debugPlayerHud[id].x = 0;
+            gameObject.debugPlayerHud[id].y = 40;
+            gameObject.debugPlayerHudLayer[id].addChild(gameObject.debugPlayerHud[id]);
+
             if (players[id].uuid === uuid)
             {
                 playerID = id;
+
             }
             gameObject.player[id].playerID = players[id].playerID;
             gameObject.playerLayer.addChild(gameObject.player[id]);
+            gameObject.playerLayer.addChild(gameObject.debugPlayerHudLayer[id]);
         }
     }
 
@@ -541,10 +655,22 @@ if ($auth < $access_levels["Member"])
         gameObject.floor[id].anchor.y = 0.5;
         gameObject.floor[id].x = globalPos.x;
         gameObject.floor[id].y = globalPos.y;
+        gameObject.floor[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
         gameObject.floor[id].scale.x = gridSize / 1024;
         gameObject.floor[id].scale.y = -gridSize / 1024;
         //let tint = rgbaToIntoColor(rng(128,255),rng(128,255),rng(128,255));
         //gameObject.floor[id].tint = tint;
+        gameObject.debugFloorHud[id] = new Text(chunkPos.x + " : " + chunkPos.y, debugFloorHudTextStyle);
+        gameObject.debugFloorHud[id].scale.x = 1;
+        gameObject.debugFloorHud[id].scale.y = -1;
+        gameObject.debugFloorHud[id].anchor.x = 0.5;
+        gameObject.debugFloorHud[id].anchor.y = 0.5;
+        gameObject.debugFloorHud[id].x = globalPos.x;
+        gameObject.debugFloorHud[id].y = globalPos.y;
+        gameObject.floorGrid[id] = new Graphics();
+        drawRect(gameObject.floorGrid[id], globalPos.x - gridSize / 2, globalPos.y - gridSize / 2, gridSize, gridSize, 0x00ff00);
+        gameObject.debugFloorHudLayer.addChild(gameObject.debugFloorHud[id]);
+        gameObject.debugFloorHudLayer.addChild(gameObject.floorGrid[id]);
         gameObject.floorLayer.addChild(gameObject.floor[id]);
     }
 
@@ -556,11 +682,35 @@ if ($auth < $access_levels["Member"])
         gameObject.wall[id].anchor.y = 0.5;
         gameObject.wall[id].x = globalPos.x;
         gameObject.wall[id].y = globalPos.y;
+        gameObject.wall[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
         gameObject.wall[id].scale.x = gridSize / 1024;
         gameObject.wall[id].scale.y = -gridSize / 1024;
         //let tint = rgbaToIntoColor(rng(128,255),rng(128,255),rng(128,255));
         //gameObject.wall[id].tint = tint;
+        gameObject.debugWallHud[id] = new Text(chunkPos.x + " : " + chunkPos.y, debugWallHudTextStyle);
+        gameObject.debugWallHud[id].scale.x = 1;
+        gameObject.debugWallHud[id].scale.y = -1;
+        gameObject.debugWallHud[id].anchor.x = 0.5;
+        gameObject.debugWallHud[id].anchor.y = 0.5;
+        gameObject.debugWallHud[id].x = globalPos.x;
+        gameObject.debugWallHud[id].y = globalPos.y;
+        gameObject.wallGrid[id] = new Graphics();
+        drawRect(gameObject.wallGrid[id], globalPos.x - gridSize / 2, globalPos.y - gridSize / 2, gridSize, gridSize, 0x0000ff);
+        gameObject.debugWallHudLayer.addChild(gameObject.debugWallHud[id]);
+        gameObject.debugWallHudLayer.addChild(gameObject.wallGrid[id]);
         gameObject.wallLayer.addChild(gameObject.wall[id]);
+    }
+
+    function deleteFloor(id)
+    {
+        gameObject.floorLayer.removeChild(gameObject.floor[id]);
+        delete gameObject.floor[id];
+    }
+
+    function deleteWall(id)
+    {
+        gameObject.wallLayer.removeChild(gameObject.wall[id]);
+        delete gameObject.wall[id];
     }
 
     function run()
@@ -569,6 +719,12 @@ if ($auth < $access_levels["Member"])
         socket.emit("updatePos", {
             func: "run",
             id: id,
+            mouse: worldMousePos,
+            fps: FPS,
+            frameTickTime: frameTickTime,
+            winCenterX: winCenterX,
+            winCenterY: winCenterY,
+            worldZoom: zoom,
         });
     }
 
@@ -578,6 +734,12 @@ if ($auth < $access_levels["Member"])
         socket.emit("updatePos", {
             func: "runStop",
             id: id,
+            mouse: worldMousePos,
+            fps: FPS,
+            frameTickTime: frameTickTime,
+            winCenterX: winCenterX,
+            winCenterY: winCenterY,
+            worldZoom: zoom,
         });
     }
 
