@@ -70,6 +70,7 @@ if ($auth < $access_levels["Member"])
 <div id="frame"></div>
 <script src="js/socket.io.min.js"></script>
 <script src="js/jquery.min.js"></script>
+<script src="js/p2.min.js"></script>
 <script src="js/pixi-core-6.5.1.min.js"></script>
 <script src="js/pixi-filters-4.1.6.js"></script>
 <script src="js/pixi-input-1.0.1-min.js"></script>
@@ -92,11 +93,31 @@ if ($auth < $access_levels["Member"])
     const AUTH_USERID = <?php echo $authuserid; ?>;
     const AUTH_KEY = "<?php echo $authkey; ?>";
     const AUTH_IP = "<?php echo $authIP; ?>";
+    const DISCORD_AVATAR = "<?php echo $discordAvatar; ?>";
     const socketIOHost = "<?php echo SOCKET_IO_HOST; ?>";
     const socketIOPort = "<?php echo SOCKET_IO_PORT; ?>";
     let uuid;
+    let debug = false;
     let socket = io("wss://" + socketIOHost + ":" + socketIOPort);
     let mapData = {};
+
+    const discordUsernameHudTextStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 18,
+        fontStyle: 'normal',
+        fontWeight: 'bold',
+        fill: ['#ffffff', '#cccccc'], // gradient
+        stroke: '#666666',
+        strokeThickness: 2,
+        dropShadow: true,
+        dropShadowColor: '#000000',
+        dropShadowBlur: 2,
+        dropShadowAngle: Math.PI / 6,
+        dropShadowDistance: 3,
+        wordWrap: false,
+        wordWrapWidth: 440,
+        lineJoin: 'round',
+    });
 
     const debugHudTextStyle = new PIXI.TextStyle({
         fontFamily: 'Arial',
@@ -217,6 +238,8 @@ if ($auth < $access_levels["Member"])
 
     let gameObject = {
         player: {},
+        playerDiscordAvatar: {},
+        playerDiscordUsername: {},
         playerSheet: {},
         floor: {},
         wall: {},
@@ -236,6 +259,37 @@ if ($auth < $access_levels["Member"])
         floorGrid: {},
     }
 
+    let world = new p2.World({
+        gravity : [0,0],
+        frictionGravity: 10,
+        //islandSplit : true,
+    });
+
+    //world.sleepMode = p2.World.ISLAND_SLEEPING;
+    world.solver.iterations = 20;
+    world.solver.tolerance = 0.1;
+    //world.setGlobalStiffness(1000000000000);
+
+    const FLAG = {
+        WALL: 1,
+        PLAYER: 2,
+        BULLET: 4,
+        BULLET_MOVEMENT: 8,
+        ZOMBIE: 16,
+        AMMO_CLIP: 32,
+        VISION_GOGGLES: 64,
+    };
+
+    let physics = {
+        player: {
+            body: {},
+            shape: {},
+        },
+        wall: {
+            body: {},
+            shape: {},
+        }
+    };
 
     App.stage = new PIXI.display.Stage();
     App.stage.sortableChildren = true;
@@ -262,6 +316,8 @@ if ($auth < $access_levels["Member"])
 
     let serverOfflineErrorView = false;
 
+    localMousePos = App.renderer.plugins.interaction.mouse.global;
+    worldMousePos = App.stage.toLocal(localMousePos);
 
 
     window.addEventListener('resize', resize);
@@ -270,6 +326,30 @@ if ($auth < $access_levels["Member"])
         mouseWheel(ev.deltaY);
     });
 
+    function clientReady()
+    {
+        socket.emit("clientReady", {
+            auth: {
+                level: AUTH_LEVEL,
+                username: AUTH_USERNAME,
+                userID: AUTH_USERID,
+                ip: AUTH_IP,
+                key: AUTH_KEY,
+            },
+            mouse: {
+                x: worldMousePos.x,
+                y: worldMousePos.y,
+            },
+            avatar: DISCORD_AVATAR,
+            player: {
+                width: gameObject.referencePlayer.width,
+                height: gameObject.referencePlayer.height,
+            },
+            winCenterX: winCenterX,
+            winCenterY: winCenterY,
+            zoom: zoom,
+        });
+    }
 
     function resize()
     {
@@ -301,22 +381,7 @@ if ($auth < $access_levels["Member"])
         loadKeyBindings();
         state = play;
         Ticker.add(delta => gameLoop(delta));
-        socket.emit("clientReady", {
-            auth: {
-                level: AUTH_LEVEL,
-                username: AUTH_USERNAME,
-                userID: AUTH_USERID,
-                ip: AUTH_IP,
-                key: AUTH_KEY,
-            },
-            player: {
-                width: gameObject.referencePlayer.width,
-                height: gameObject.referencePlayer.height,
-            },
-            winCenterX: winCenterX,
-            winCenterY: winCenterY,
-            zoom: zoom,
-        });
+        clientReady();
         setupLoaded = true;
     }
 
@@ -332,13 +397,33 @@ if ($auth < $access_levels["Member"])
         {
             for (let id in players)
             {
+                id = parseInt(id);
                 if (isDefined(gameObject.player[id]))
                 {
+                    //physics.player.body[id].velocity = players[id].velocity;
+                    let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
+                    let playerDim = {x: gameObject.player[id].width, y: gameObject.player[id].height};
                     gameObject.player[id].x = players[id].body.position[0];
                     gameObject.player[id].y = players[id].body.position[1];
                     gameObject.player[id].rotation = players[id].body.angle;
-                    drawText(gameObject.debugPlayerHud[id], players[id].chunkPos[0]+" : "+players[id].chunkPos[1], false, true);
+                    gameObject.playerDiscordAvatar[id].x = players[id].body.position[0];
+                    gameObject.playerDiscordAvatar[id].y = (players[id].body.angle >= 0 && toDeg(players[id].body.angle) <= 180) ? players[id].body.position[1] + 10 + (playerDim.y / 2) + (avatarDim.y / 2) + Math.abs(Math.sin(players[id].body.angle) * (playerDim.x - avatarDim.y)) : players[id].body.position[1] + 10 + (playerDim.y / 2) + (avatarDim.y / 2);
+                    gameObject.playerDiscordUsername[id].x = gameObject.playerDiscordAvatar[id].x + (avatarDim.x / 2) + 10;
+                    gameObject.playerDiscordUsername[id].y = gameObject.playerDiscordAvatar[id].y;
+                    drawText(gameObject.debugPlayerHud[id], players[id].chunkPos[0]+" : "+players[id].chunkPos[1]+" ("+toDeg(players[id].body.angle).toFixed(0)+")", false, true);
                     gameObject.debugPlayerHudLayer[id].position = gameObject.player[id].position;
+                    if (id === playerID)
+                    {
+                        gameObject.playerDiscordAvatar[id].visible = false;
+                        gameObject.playerDiscordUsername[id].visible = false;
+                    } else {
+                        gameObject.playerDiscordAvatar[id].visible = true;
+                        gameObject.playerDiscordUsername[id].visible = true;
+                    }
+                    if (debug)
+                        gameObject.debugPlayerHudLayer[id].visible = true;
+                    else
+                        gameObject.debugPlayerHudLayer[id].visible = false;
                 } else {
                     createPlayer(id);
                 }
@@ -347,8 +432,8 @@ if ($auth < $access_levels["Member"])
             {
                 if (isDefined(gameObject.player[playerID]))
                 {
-                    App.stage.pivot.x = gameObject.player[playerID].x;
-                    App.stage.pivot.y = gameObject.player[playerID].y;
+                    App.stage.pivot.x = players[playerID].body.position[0];
+                    App.stage.pivot.y = players[playerID].body.position[1];
                 }
                 if (isDefined(mapData))
                 {
@@ -461,7 +546,14 @@ if ($auth < $access_levels["Member"])
                 });
             }
         }
-
+        if (debug)
+        {
+            gameObject.debugFloorHudLayer.visible = true;
+            gameObject.debugWallHudLayer.visible = true;
+        } else {
+            gameObject.debugFloorHudLayer.visible = false;
+            gameObject.debugWallHudLayer.visible = false;
+        }
     }
 
     socket.on("connect_error", function (msg) {
@@ -502,22 +594,7 @@ if ($auth < $access_levels["Member"])
             Loader.onProgress.add(loadinginfo);
             Loader.load(setup);
         } else {
-            socket.emit("clientReady", {
-                auth: {
-                    level: AUTH_LEVEL,
-                    username: AUTH_USERNAME,
-                    userID: AUTH_USERID,
-                    ip: AUTH_IP,
-                    key: AUTH_KEY,
-                },
-                player: {
-                    width: gameObject.referencePlayer.width,
-                    height: gameObject.referencePlayer.height,
-                },
-                winCenterX: winCenterX,
-                winCenterY: winCenterY,
-                zoom: zoom,
-            });
+            //clientReady();
         }
     });
 
@@ -537,6 +614,22 @@ if ($auth < $access_levels["Member"])
             {
                 gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
                 delete gameObject.debugPlayerHudLayer[id];
+            }
+        }
+        if (isDefined(gameObject.playerDiscordUsername))
+        {
+            for (let id in gameObject.playerDiscordUsername)
+            {
+                gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
+                delete gameObject.playerDiscordUsername[id];
+            }
+        }
+        if (isDefined(gameObject.playerDiscordAvatar))
+        {
+            for (let id in gameObject.playerDiscordAvatar)
+            {
+                gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
+                delete gameObject.playerDiscordAvatar[id];
             }
         }
         if (isDefined(gameObject.player))
@@ -597,7 +690,11 @@ if ($auth < $access_levels["Member"])
         gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
         gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
         gameObject.playerLayer.removeChild(gameObject.player[id]);
+        gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
+        gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
         delete gameObject.player[id];
+        delete gameObject.playerDiscordUsername[id];
+        delete gameObject.playerDiscordAvatar[id];
         delete gameObject.debugPlayerHudLayer[id];
         delete gameObject.debugPlayerHud[id];
         players = data.players;
@@ -618,6 +715,19 @@ if ($auth < $access_levels["Member"])
     {
         if (!isDefined(gameObject.player[id]))
         {
+            //5459
+            let avatar = players[id].avatar;
+            gameObject.playerDiscordAvatar[id] = new Sprite.from(avatar);
+            gameObject.playerDiscordAvatar[id].anchor.x = 0.5;
+            gameObject.playerDiscordAvatar[id].anchor.y = 0.5;
+            gameObject.playerDiscordAvatar[id].scale.x = 0.35;
+            gameObject.playerDiscordAvatar[id].scale.y = -0.35;
+            gameObject.playerDiscordUsername[id] = new Text(players[id].authUsername, discordUsernameHudTextStyle);
+            gameObject.playerDiscordUsername[id].anchor.x = 0;
+            gameObject.playerDiscordUsername[id].anchor.y = 0.5;
+            gameObject.playerDiscordUsername[id].scale.x = 1;
+            gameObject.playerDiscordUsername[id].scale.y = -1;
+
             gameObject.player[id] = new PIXI.AnimatedSprite(gameObject.playerSheet.animations["player/rifle/idle/survivor-idle_rifle"]);
             gameObject.player[id].x = players[id].body.position[0];
             gameObject.player[id].y = players[id].body.position[1];
@@ -635,15 +745,41 @@ if ($auth < $access_levels["Member"])
             gameObject.debugPlayerHud[id].x = 0;
             gameObject.debugPlayerHud[id].y = 40;
             gameObject.debugPlayerHudLayer[id].addChild(gameObject.debugPlayerHud[id]);
+            gameObject.debugPlayerHudLayer[id].visible = false;
 
             if (players[id].uuid === uuid)
             {
                 playerID = id;
-
             }
             gameObject.player[id].playerID = players[id].playerID;
             gameObject.playerLayer.addChild(gameObject.player[id]);
+            gameObject.playerLayer.addChild(gameObject.playerDiscordAvatar[id]);
+            gameObject.playerLayer.addChild(gameObject.playerDiscordUsername[id]);
             gameObject.playerLayer.addChild(gameObject.debugPlayerHudLayer[id]);
+
+
+            /*
+            physics.player.body[id] = new p2.Body({
+                mass: 100,
+                position: [players[id].body.position[0], players[id].body.position[1]],
+                angle: players[id].body.angle,
+            });
+            let width = gameObject.player[id].width;
+            let height = gameObject.player[id].height;
+            physics.player.shape[id] = new p2.Box({
+                width: width,
+                height: height,
+            });
+            physics.player.shape[id].anchorRatio = {x: 0.237983, y: 0.547403};
+            physics.player.shape[id].collisionGroup = FLAG.PLAYER;
+            physics.player.shape[id].collisionMask = 0;
+            physics.player.body[id].object = "player";
+            physics.player.body[id].objectID = id;
+            physics.player.body[id].damping = 0;
+            physics.player.body[id].centerMass = {x: (width / 2) - (width * physics.player.shape[id].anchorRatio.x), y: (height / 2) - (height * physics.player.shape[id].anchorRatio.y)};
+            physics.player.body[id].addShape(physics.player.shape[id], [physics.player.body[id].centerMass.x, physics.player.body[id].centerMass.y], toRad(0));
+            world.addBody(physics.player.body[id]);
+            */
         }
     }
 
@@ -672,6 +808,7 @@ if ($auth < $access_levels["Member"])
         gameObject.debugFloorHudLayer.addChild(gameObject.debugFloorHud[id]);
         gameObject.debugFloorHudLayer.addChild(gameObject.floorGrid[id]);
         gameObject.floorLayer.addChild(gameObject.floor[id]);
+        gameObject.debugFloorHudLayer.visible = false;
     }
 
     function createWall(id, chunkPos)
@@ -699,6 +836,7 @@ if ($auth < $access_levels["Member"])
         gameObject.debugWallHudLayer.addChild(gameObject.debugWallHud[id]);
         gameObject.debugWallHudLayer.addChild(gameObject.wallGrid[id]);
         gameObject.wallLayer.addChild(gameObject.wall[id]);
+        gameObject.debugWallHudLayer.visible = false;
     }
 
     function deleteFloor(id)
@@ -854,6 +992,11 @@ if ($auth < $access_levels["Member"])
         } else {
             zoomOut();
         }
+    }
+
+    function toggleDebug()
+    {
+        debug = !debug;
     }
 
     function dofunction(funcstr, param = [])

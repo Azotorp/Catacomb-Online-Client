@@ -38,6 +38,7 @@ if (!isset($_SESSION["authusername"]) || !isset($_SESSION["authsid"]) || !isset(
 }
 $authIP = get_ip();
 $auth = getdiscordauth($authuserid, $authsid, $authIP);
+$discordAvatar = $_SESSION["avatar_uri"];
 $authkey = sha1($auth.SECRETSALT.$authusername.SECRETSALT.$authuserid.SECRETSALT.$authsid);
 $_SESSION["authlevel"] = $auth;
 $_SESSION["authkey"] = $authkey;

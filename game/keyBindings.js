@@ -147,9 +147,9 @@ var keybindings = {
         key: "F12",
         code: 123,
         function: {
-            down: "",
+            down: "toggleDebug",
             up: "",
-            params_down: [5],
+            params_down: [],
             params_up: [],
             holdrepeat: false,
         },
