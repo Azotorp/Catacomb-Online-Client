@@ -19,4 +19,5 @@ require("lib/init.php");
     <?php
     }
     ?>
+    <a href="https://github.com/Vzotorp">Catacomb Online @ GitHub</a>
 </center>
