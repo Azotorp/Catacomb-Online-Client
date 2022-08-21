@@ -232,8 +232,8 @@ if ($auth < $access_levels["Member"])
     let zoom = pow(zoomMulti, zoomStep);
     let localMousePos, worldMousePos;
 
-    let maxChunkRenderX = Math.ceil(((winCenterX * zoom) - (gridSize / 2)) / gridSize) + 2;
-    let maxChunkRenderY = Math.ceil(((winCenterY * zoom) - (gridSize / 2)) / gridSize) + 2;
+    let maxChunkRenderX = Math.ceil(((winCenterX * zoom) - (gridSize / 2)) / gridSize) + 1;
+    let maxChunkRenderY = Math.ceil(((winCenterY * zoom) - (gridSize / 2)) / gridSize) + 1;
 
     let gameObject = {
         player: {},
@@ -376,10 +376,6 @@ if ($auth < $access_levels["Member"])
         gameObject.referencePlayer = new PIXI.AnimatedSprite(gameObject.playerSheet.animations["player/rifle/idle/survivor-idle_rifle"]);
         gameObject.referencePlayer.scale.x = playerScale;
         gameObject.referencePlayer.scale.y = -playerScale;
-
-
-
-
         loadKeyBindings();
         state = play;
         Ticker.add(delta => gameLoop(delta));
@@ -455,19 +451,16 @@ if ($auth < $access_levels["Member"])
                             {
                                 let x = playerChunkPos.x + sx;
                                 let y = playerChunkPos.y + sy;
-                                let xyKey = getXYKey({x: x, y: y});
+                                let pos = {x: x, y: y};
+                                let xyKey = getXYKey(pos);
                                 if (isDefined(mapData[xyKey]))
                                 {
                                     let tile = mapData[xyKey];
                                     foundTile.push(tile);
-                                    if (!isDefined(gameObject.shadowOverlay[xyKey]))
-                                    {
-                                        addShadow({x: x, y: y});
-                                    }
+                                    createShadow(xyKey);
                                 }
                             }
                         }
-
                         if (foundTile.length > 0)
                         {
                             for (let i in foundTile)
@@ -490,7 +483,7 @@ if ($auth < $access_levels["Member"])
                                                 {
                                                     let newPos = {x: pos.x + xx, y: pos.y + yy};
                                                     deleteShadow(getXYKey(newPos));
-                                                    addShadow(newPos);
+                                                    createShadow(getXYKey(newPos));
                                                 }
                                             }
                                         }
@@ -511,7 +504,7 @@ if ($auth < $access_levels["Member"])
                                                 {
                                                     let newPos = {x: pos.x + xx, y: pos.y + yy};
                                                     deleteShadow(getXYKey(newPos));
-                                                    addShadow(newPos);
+                                                    createShadow(getXYKey(newPos));
                                                 }
                                             }
                                         }
@@ -614,81 +607,33 @@ if ($auth < $access_levels["Member"])
             Loader.add("wallCornerOverlay", "images/map/overlay/wallCorner.png");
             Loader.add("floorOpeningAOverlay", "images/map/overlay/floorOpeningA.png");
             Loader.add("floorOpeningBOverlay", "images/map/overlay/floorOpeningB.png");
+            Loader.add("floorOpeningCOverlay", "images/map/overlay/floorOpeningC.png");
             Loader.onProgress.add(loadinginfo);
             Loader.load(setup);
         } else {
-            //clientReady();
+            clientReady();
         }
     });
 
     socket.on("disconnect", function(msg) {
         dump(msg);
-        if (isDefined(gameObject.debugPlayerHud))
-        {
-            for (let id in gameObject.debugPlayerHud)
-            {
-                gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
-                delete gameObject.debugPlayerHud[id];
-            }
-        }
-        if (isDefined(gameObject.debugPlayerHudLayer))
-        {
-            for (let id in gameObject.debugPlayerHudLayer)
-            {
-                gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
-                delete gameObject.debugPlayerHudLayer[id];
-            }
-        }
-        if (isDefined(gameObject.playerDiscordUsername))
-        {
-            for (let id in gameObject.playerDiscordUsername)
-            {
-                gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
-                delete gameObject.playerDiscordUsername[id];
-            }
-        }
-        if (isDefined(gameObject.playerDiscordAvatar))
-        {
-            for (let id in gameObject.playerDiscordAvatar)
-            {
-                gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
-                delete gameObject.playerDiscordAvatar[id];
-            }
-        }
-        if (isDefined(gameObject.player))
-        {
-            for (let id in gameObject.player)
-            {
-                gameObject.playerLayer.removeChild(gameObject.player[id]);
-                delete players[gameObject.player[id].playerID];
-                delete gameObject.player[id];
-            }
-        }
-        if (isDefined(gameObject.floor))
-        {
-            for (let id in gameObject.floor)
-            {
-                gameObject.floorLayer.removeChild(gameObject.floor[id]);
-                delete gameObject.floor[id];
-            }
-        }
-        if (isDefined(gameObject.wall))
-        {
-            for (let id in gameObject.wall)
-            {
-                gameObject.wallLayer.removeChild(gameObject.wall[id]);
-                delete gameObject.wall[id];
-            }
-        }
+        deletePlayers();
+        deleteShadows();
+        deleteFloors();
+        deleteWalls();
+
         document.querySelector('#frame').removeChild(App.view);
         document.querySelector(".offline").style.display = "inline-block"
 
         //dump(App.stage);
         //dump(gameObject.player);
-        //dump(players);
+        players = {};
+        mapData = {};
+        playerID = false;
     });
 
     socket.on('newPlayer', function(data) {
+        mapData = data.mapData;
         let playerData = data.playerData;
         let id = playerData.playerID;
         if (!isDefined(gameObject.player[id]))
@@ -710,16 +655,7 @@ if ($auth < $access_levels["Member"])
 
     socket.on('userDisconnect', function(data) {
         let id = data.playerID;
-        gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
-        gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
-        gameObject.playerLayer.removeChild(gameObject.player[id]);
-        gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
-        gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
-        delete gameObject.player[id];
-        delete gameObject.playerDiscordUsername[id];
-        delete gameObject.playerDiscordAvatar[id];
-        delete gameObject.debugPlayerHudLayer[id];
-        delete gameObject.debugPlayerHud[id];
+        deletePlayer(id);
         players = data.players;
     });
 
@@ -862,517 +798,32 @@ if ($auth < $access_levels["Member"])
         gameObject.debugWallHudLayer.visible = false;
     }
 
-    function createShadowOverlay(id, chunkPos, type, rotation)
+    function createShadow(id)
     {
         if (!isDefined(gameObject.shadowOverlay[id]))
         {
-            //dump("create shadow: "+id);
-            gameObject.shadowOverlay[id] = new Sprite(Resources[type + "Overlay"].texture);
-            let globalPos = calcGlobalPos(chunkPos, gridSize);
-            gameObject.shadowOverlay[id].anchor.x = 0.5;
-            gameObject.shadowOverlay[id].anchor.y = 0.5;
-            gameObject.shadowOverlay[id].x = globalPos.x;
-            gameObject.shadowOverlay[id].y = globalPos.y;
-            gameObject.shadowOverlay[id].rotation = toRad(rotation);
-            gameObject.shadowOverlay[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
-            gameObject.shadowOverlay[id].scale.x = (gridSize / 1024) / 4;
-            gameObject.shadowOverlay[id].scale.y = -(gridSize / 1024) / 4;
-            gameObject.shadowOverlayLayer.addChild(gameObject.shadowOverlay[id]);
-        }
-    }
-
-    function addShadow(pos)
-    {
-        let shadow = false;
-        let rotation = false;
-        let x = pos.x;
-        let y = pos.y;
-        if (!isDefined(mapData[getXYKey({x: x, y: y})]))
-            return;
-        if (mapData[getXYKey({x: x, y: y})].tile !== "floor")
-            return;
-        let xyKey = getXYKey({x: x, y: y});
-        let tiles = [];
-        /*
-        [ 0 ] [ 1 ] [ 2 ]
-        [ 3 ] [ 4 ] [ 5 ]
-        [ 6 ] [ 7 ] [ 8 ]
-        */
-        for (let yy = 1; yy >= -1; yy--)
-        {
-            for (let xx = -1; xx <= 1; xx++)
+            let chunkPos = getXYPos(id);
+            let type = mapData[id].shadow;
+            let rotation = mapData[id].shadowRotation;
+            if (type !== false && rotation !== false)
             {
-                let tile = mapData[getXYKey({x: x + xx, y: y + yy})];
-                if (!isDefined(tile))
-                    return;
-                tiles.push({
-                    type: tile.tile,
-                    is: function(check) {
-                        if (check === "wall" && this.type === "wall")
-                            return true;
-                        if (check === "wall" && this.type === "floor")
-                            return false;
-                        if (check === "floor" && this.type === "floor")
-                            return true;
-                        if (check === "floor" && this.type === "wall")
-                            return false;
-                        if (check === "any")
-                            return true;
-                    },
-                });
+                gameObject.shadowOverlay[id] = new Sprite(Resources[type + "Overlay"].texture);
+                let globalPos = calcGlobalPos(chunkPos, gridSize);
+                gameObject.shadowOverlay[id].anchor.x = 0.5;
+                gameObject.shadowOverlay[id].anchor.y = 0.5;
+                gameObject.shadowOverlay[id].x = globalPos.x;
+                gameObject.shadowOverlay[id].y = globalPos.y;
+                gameObject.shadowOverlay[id].rotation = toRad(rotation);
+                gameObject.shadowOverlay[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
+                gameObject.shadowOverlay[id].scale.x = gridSize / 1024;
+                gameObject.shadowOverlay[id].scale.y = -gridSize / 1024;
+                gameObject.shadowOverlayLayer.addChild(gameObject.shadowOverlay[id]);
             }
-        }
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "hollowBox";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "crossroad";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "deadEnd";
-            rotation = 0; // no change / image facing south like a U shape
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "deadEnd";
-            rotation = 90; // 90 deg anti-clockwise
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "deadEnd";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "deadEnd";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "floorCorner";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "floorCorner";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorCorner";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "floorCorner";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "side";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "side";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "side";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "side";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "sideCornerA";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "sideCornerA";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "sideCornerA";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "sideCornerA";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "sideCornerB";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "sideCornerB";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "sideCornerB";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "sideCornerB";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "straight";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "straight";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "tJunc";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "tJunc";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "tJunc";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "tJunc";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "turn";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "turn";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "turn";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "turn";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "wallCorner";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("wall") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "wallCorner";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("any") && tiles[7].is("wall") && tiles[8].is("any")
-        )
-        {
-            shadow = "wallCorner";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("any") && tiles[1].is("wall") && tiles[2].is("any") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("wall") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("any")
-        )
-        {
-            shadow = "wallCorner";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            dump("yer");
-            shadow = "floorOpeningA";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "floorOpeningA";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorOpeningA";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorOpeningA";
-            rotation = 270;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("floor")
-        )
-        {
-            shadow = "floorOpeningB";
-            rotation = 0;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("floor") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorOpeningB";
-            rotation = 90;
-        }
-
-        if (
-            tiles[0].is("floor") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("wall") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorOpeningB";
-            rotation = 180;
-        }
-
-        if (
-            tiles[0].is("wall") && tiles[1].is("floor") && tiles[2].is("wall") &&
-            tiles[3].is("floor") && tiles[4].is("floor") && tiles[5].is("floor") &&
-            tiles[6].is("floor") && tiles[7].is("floor") && tiles[8].is("wall")
-        )
-        {
-            shadow = "floorOpeningB";
-            rotation = 270;
-        }
-
-
-        if (shadow !== false && rotation !== false)
-        {
-            createShadowOverlay(xyKey, pos, shadow, rotation);
         }
     }
 
     function deleteFloor(id)
     {
-        //dump("delete floor: "+id);
         gameObject.floorLayer.removeChild(gameObject.floor[id]);
         gameObject.debugFloorHudLayer.removeChild(gameObject.debugFloorHud[id]);
         gameObject.debugFloorHudLayer.removeChild(gameObject.floorGrid[id]);
@@ -1383,7 +834,6 @@ if ($auth < $access_levels["Member"])
 
     function deleteWall(id)
     {
-        //dump("delete wall: "+id);
         gameObject.wallLayer.removeChild(gameObject.wall[id]);
         gameObject.debugWallHudLayer.removeChild(gameObject.debugWallHud[id]);
         gameObject.debugWallHudLayer.removeChild(gameObject.wallGrid[id]);
@@ -1394,9 +844,22 @@ if ($auth < $access_levels["Member"])
 
     function deleteShadow(id)
     {
-        //dump("delete shadow: "+id);
         gameObject.shadowOverlayLayer.removeChild(gameObject.shadowOverlay[id]);
         delete gameObject.shadowOverlay[id];
+    }
+
+    function deletePlayer(id)
+    {
+        gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
+        gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
+        gameObject.playerLayer.removeChild(gameObject.player[id]);
+        gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
+        gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
+        delete gameObject.player[id];
+        delete gameObject.playerDiscordUsername[id];
+        delete gameObject.playerDiscordAvatar[id];
+        delete gameObject.debugPlayerHudLayer[id];
+        delete gameObject.debugPlayerHud[id];
     }
 
     function deleteShadows()
@@ -1405,9 +868,40 @@ if ($auth < $access_levels["Member"])
         {
             for (let id in gameObject.shadowOverlay)
             {
-                //dump("delete shadow: "+id);
-                gameObject.shadowOverlayLayer.removeChild(gameObject.shadowOverlay[id]);
-                delete gameObject.shadowOverlay[id];
+                deleteShadow(id);
+            }
+        }
+    }
+
+    function deleteWalls()
+    {
+        if (objLength(gameObject.wall, true) > 0)
+        {
+            for (let id in gameObject.wall)
+            {
+                deleteWall(id);
+            }
+        }
+    }
+
+    function deleteFloors()
+    {
+        if (objLength(gameObject.floor, true) > 0)
+        {
+            for (let id in gameObject.floor)
+            {
+                deleteFloor(id);
+            }
+        }
+    }
+
+    function deletePlayers()
+    {
+        if (objLength(gameObject.player, true) > 0)
+        {
+            for (let id in gameObject.player)
+            {
+                deletePlayer(id);
             }
         }
     }
