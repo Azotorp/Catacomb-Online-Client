@@ -1,3 +1,8 @@
+let sha256 = function(input)
+{
+    return crypto.createHash('sha256').update(input).digest('hex');
+}
+
 function pow(num, exp)
 {
     return Math.pow(num, exp);
