@@ -15,6 +15,7 @@ function play(delta) {
                 let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
                 let playerDim = {x: gameObject.player[id].width, y: gameObject.player[id].height};
                 players[id].body.position = physics.player.body[id].position;
+                players[id].body.angle = physics.player.body[id].angle;
                 gameObject.player[id].x = players[id].body.position[0];
                 gameObject.player[id].y = players[id].body.position[1];
                 gameObject.player[id].rotation = players[id].body.angle;
@@ -164,30 +165,31 @@ function play(delta) {
                 }
             }
             let path = players[playerID].fovScanPath;
-            //let polyPath = [];
+            //dump(path);
+            let polyPath = [];
             //let xyKeyList = {};
             //gameObject.playerFOVScanMask.clear();
             if (isDefined(path))
             {
-                //for (let p in path)
-                //{
-                /*
-                if (path[p].body !== false)
+                for (let p in path)
                 {
-                    let xyKey = path[p].body;
-                    if (!isDefined(xyKeyList[xyKey]))
+                    /*
+                    if (path[p].body !== false)
                     {
-                        xyKeyList[xyKey] = xyKey;
-                        let pos = calcGlobalPos(getXYPos(xyKey), gridSize);
-                        drawCircle(gameObject.playerFOVScanMask, pos.x, -pos.y, 15, 0x00ffff, 1);
+                        let xyKey = path[p].body;
+                        if (!isDefined(xyKeyList[xyKey]))
+                        {
+                            xyKeyList[xyKey] = xyKey;
+                            let pos = calcGlobalPos(getXYPos(xyKey), gridSize);
+                            drawCircle(gameObject.playerFOVScanMask, pos.x, -pos.y, 15, 0x00ffff, 1);
+                        }
                     }
-                }*/
-
-                //polyPath.push(path[p].x);
-                //polyPath.push(path[p].y);
-                //drawCircle(gameObject.playerFOVScanMask, path[p].x, path[p].y, 5, 0x00ff00, 1);
-                //}
-                drawPoly(gameObject.playerFOVScanMask, path, 0xff0000, 1, 1, 0xff0000, 1, true);
+                    */
+                    polyPath.push(path[p].x);
+                    polyPath.push(path[p].y);
+                    //drawCircle(gameObject.playerFOVScanMask, path[p].x, path[p].y, 5, 0x00ff00, 1);
+                }
+                drawPoly(gameObject.playerFOVScanMask, polyPath, 0xff0000, 1, 1, 0xff0000, 1, true);
             }
 
             socket.emit("updateServer", {

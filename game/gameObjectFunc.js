@@ -41,6 +41,8 @@ function createPlayer(id)
             gameObject.playerFOVScanMask.scale.x = 1;
             gameObject.playerFOVScanMask.scale.y = -1;
             gameObject.playerFOVScanMaskLayer.addChild(gameObject.playerFOVScanMask);
+            //gameObject.playerFOVScanMask.filters = [applyBlurFilter(50)];
+            //gameObject.worldLayer.addChild(gameObject.playerFOVScanMask);
             gameObject.catacombLayer.mask = gameObject.playerFOVScanMaskLayer;
         }
         gameObject.player[id].playerID = players[id].playerID;
