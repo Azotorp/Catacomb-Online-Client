@@ -3,4 +3,6 @@ Client side PHP/Javascript code for a multiplayer/coop top down perspective WebG
 Uses Discord for player account authentication.<br>
 This game is not yet complete!<br>
 
-Working Demo: https://catacomb.online (Server side source code: https://github.com/Vzotorp/Catacomb-Online-Server)
+Working Demo: https://catacomb.online (Server side source code: https://github.com/Vzotorp/Catacomb-Online-Server)<br>
+
+Join us on Discord: https://discord.gg/nvQzTeRM7s
