@@ -14,8 +14,8 @@ function play(delta) {
                 //physics.player.body[id].velocity = players[id].velocity;
                 let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
                 let playerDim = {x: gameObject.player[id].width, y: gameObject.player[id].height};
-                players[id].body.position = physics.player.body[id].position;
-                players[id].body.angle = physics.player.body[id].angle;
+                //players[id].body.position = physics.player.body[id].position;
+                //players[id].body.angle = physics.player.body[id].angle;
                 gameObject.player[id].x = players[id].body.position[0];
                 gameObject.player[id].y = players[id].body.position[1];
                 gameObject.player[id].rotation = players[id].body.angle;
@@ -37,6 +37,10 @@ function play(delta) {
                     gameObject.debugPlayerHudLayer[id].visible = true;
                 else
                     gameObject.debugPlayerHudLayer[id].visible = false;
+                if (shadows)
+                    gameObject.shadowOverlayLayer.visible = true;
+                else
+                    gameObject.shadowOverlayLayer.visible = false;
             } else {
                 createPlayer(id);
             }

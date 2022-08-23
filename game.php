@@ -101,7 +101,7 @@ if ($auth < $access_levels["Member"])
     };
     const AUTH_LEVEL = <?php echo $auth; ?>;
     const AUTH_USERNAME = "<?php echo $authusername; ?>";
-    const AUTH_USERID = <?php echo $authuserid; ?>;
+    const AUTH_USERID = "<?php echo $authuserid; ?>";
     const AUTH_KEY = "<?php echo $authkey; ?>";
     const AUTH_IP = "<?php echo $authIP; ?>";
     const DISCORD_AVATAR = "<?php echo $discordAvatar; ?>";

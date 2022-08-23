@@ -50,7 +50,7 @@ function createPlayer(id)
         gameObject.playerLayer.addChild(gameObject.playerDiscordAvatar[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordUsername[id]);
         gameObject.playerLayer.addChild(gameObject.debugPlayerHudLayer[id]);
-        physicsAddPlayer(id);
+        //physicsAddPlayer(id);
 
     }
 }
@@ -109,7 +109,7 @@ function createWall(id, chunkPos)
     gameObject.debugWallHudLayer.addChild(gameObject.wallGrid[id]);
     gameObject.wallLayer.addChild(gameObject.wall[id]);
     gameObject.debugWallHudLayer.visible = false;
-    physicsAddWall(id);
+    //physicsAddWall(id);
 }
 
 function createShadow(id)
@@ -151,12 +151,12 @@ function deleteWall(id)
     gameObject.wallLayer.removeChild(gameObject.wall[id]);
     gameObject.debugWallHudLayer.removeChild(gameObject.debugWallHud[id]);
     gameObject.debugWallHudLayer.removeChild(gameObject.wallGrid[id]);
-    physics.world.removeBody(physics.wall.body[id]);
+    //physics.world.removeBody(physics.wall.body[id]);
     delete gameObject.wall[id];
     delete gameObject.debugWallHud[id];
     delete gameObject.wallGrid[id];
-    delete physics.wall.body[id];
-    delete physics.wall.shape[id];
+    //delete physics.wall.body[id];
+    //delete physics.wall.shape[id];
 }
 
 function deleteShadow(id)
@@ -172,14 +172,14 @@ function deletePlayer(id)
     gameObject.playerLayer.removeChild(gameObject.player[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
-    physics.world.removeBody(physics.player.body[id]);
+    //physics.world.removeBody(physics.player.body[id]);
     delete gameObject.player[id];
     delete gameObject.playerDiscordUsername[id];
     delete gameObject.playerDiscordAvatar[id];
     delete gameObject.debugPlayerHudLayer[id];
     delete gameObject.debugPlayerHud[id];
-    delete physics.player.body[id];
-    delete physics.player.shape[id];
+    //delete physics.player.body[id];
+    //delete physics.player.shape[id];
 }
 
 function deleteShadows()

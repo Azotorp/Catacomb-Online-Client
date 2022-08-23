@@ -70,13 +70,13 @@ socket.on('userDisconnect', function(data) {
 });
 
 socket.on('serverUpdate', function(data) {
-    mapData = data.mapData;
+    mapData = data.mapData[playerID];
     players = data.players;
     for (let p in players)
     {
-        physics.player.body[p].position = players[p].body.position;
-        physics.player.body[p].angle = players[p].body.angle;
-        physics.player.body[p].velocity = players[p].body.velocity;
+        //physics.player.body[p].position = players[p].body.position;
+        //physics.player.body[p].angle = players[p].body.angle;
+        //physics.player.body[p].velocity = players[p].body.velocity;
     }
 });
 

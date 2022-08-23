@@ -1,6 +1,7 @@
 const realWorldScale = 0.00761461306 / playerScale; // meters per pixel
 let uuid;
 let debug = false;
+let shadows = true;
 let socket = io("wss://" + socketIOHost + ":" + socketIOPort);
 let mapData = {};
 let gamedelta;

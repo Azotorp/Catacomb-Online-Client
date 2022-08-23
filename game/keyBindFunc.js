@@ -146,6 +146,11 @@ function toggleDebug()
     debug = !debug;
 }
 
+function toggleShadows()
+{
+    shadows = !shadows;
+}
+
 function dofunction(funcstr, param = [])
 {
     let func = window[funcstr];

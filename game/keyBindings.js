@@ -135,7 +135,7 @@ var keybindings = {
         key: "F11",
         code: 122,
         function: {
-            down: "",
+            down: "toggleShadows",
             up: "",
             params_down: [],
             params_up: [],
