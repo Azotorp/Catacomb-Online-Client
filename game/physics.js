@@ -15,7 +15,7 @@ function physicsAddPlayer(id)
     });
     physics.player.shape[id].anchorRatio = {x: 0.237983, y: 0.547403};
     physics.player.shape[id].collisionGroup = FLAG.PLAYER;
-    physics.player.shape[id].collisionMask = 0;
+    physics.player.shape[id].collisionMask = FLAG.WALL | FLAG.BULLET | FLAG.VISION_GOGGLES | FLAG.PLAYER | FLAG.ZOMBIE | FLAG.AMMO_CLIP;;
     physics.player.body[id].object = "player";
     physics.player.body[id].objectID = id;
     physics.player.body[id].damping = 0;
@@ -24,13 +24,13 @@ function physicsAddPlayer(id)
     physics.world.addBody(physics.player.body[id]);
 }
 
-function physicsAddWall(id)
+function physicsAddWall(id, chunkPos)
 {
-    let pos = getXYPos(id);
     if (isDefined(physics.wall.body[id]))
         return;
+    let globalPos = calcGlobalPos(chunkPos, gridSize);
     physics.wall.body[id] = new p2.Body({
-        position: [pos.x, pos.y],
+        position: [globalPos.x, globalPos.y],
         angle: 0,
         type: p2.Body.STATIC,
     });
@@ -47,4 +47,13 @@ function physicsAddWall(id)
     physics.wall.body[id].centerMass = {x: (physics.wall.shape[id].width / 2) - (physics.wall.shape[id].width * physics.wall.shape[id].anchorRatio.x), y: (physics.wall.shape[id].height / 2) - (physics.wall.shape[id].height * physics.wall.shape[id].anchorRatio.y)};
     physics.wall.body[id].addShape(physics.wall.shape[id], [physics.wall.body[id].centerMass.x, physics.wall.body[id].centerMass.y], toRad(0));
     physics.world.addBody(physics.wall.body[id]);
+}
+
+function physicsDeleteWall(id)
+{
+    if (!isDefined(physics.wall.body[id]))
+        return;
+    physics.world.removeBody(physics.wall.body[id]);
+    delete physics.wall.body[id];
+    delete physics.wall.shape[id];
 }

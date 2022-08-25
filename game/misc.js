@@ -40,8 +40,12 @@ function nthRoot(num, root)
 
 function distance(obj1, obj2 = false)
 {
+    if (!isObj(obj1))
+        obj1 = {x: obj1[0], y: obj1[1]};
     if (obj2 !== false)
     {
+        if (!isObj(obj2))
+            obj2 = {x: obj2[0], y: obj2[1]};
         return sqrt(pow(obj1.x - obj2.x,2) + pow(obj1.y - obj2.y,2));
     } else {
         return sqrt(pow(obj1.x,2) + pow(obj1.y,2));

@@ -207,8 +207,8 @@ var keybindings = {
         key: "Alt",
         code: 18,
         function: {
-            down: "",
-            up: "",
+            down: "tipToe",
+            up: "stopTipToe",
             params_down: [],
             params_up: [],
             holdrepeat: false,

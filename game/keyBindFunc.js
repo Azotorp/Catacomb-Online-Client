@@ -1,103 +1,195 @@
 function run()
 {
     let id = playerID;
+    let func = "run";
     socket.emit("updatePos", {
-        func: "run",
         id: id,
-        mouse: worldMousePos,
-        fps: FPS,
-        frameTickTime: frameTickTime,
-        winCenterX: winCenterX,
-        winCenterY: winCenterY,
-        worldZoom: zoom,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function stopRun()
 {
     let id = playerID;
+    let func = "runStop";
     socket.emit("updatePos", {
-        func: "runStop",
         id: id,
-        mouse: worldMousePos,
-        fps: FPS,
-        frameTickTime: frameTickTime,
-        winCenterX: winCenterX,
-        winCenterY: winCenterY,
-        worldZoom: zoom,
+        func: func,
     });
+    processMovementCmd(id, func);
+}
+
+function tipToe()
+{
+    let id = playerID;
+    let func = "tipToe";
+    socket.emit("updatePos", {
+        id: id,
+        func: func,
+    });
+    processMovementCmd(id, func);
+}
+
+function stopTipToe()
+{
+    let id = playerID;
+    let func = "tipToeStop";
+    socket.emit("updatePos", {
+        id: id,
+        func: func,
+    });
+    processMovementCmd(id, func);
 }
 
 function up()
 {
     let id = playerID;
+    let func = "up";
     socket.emit("updatePos", {
-        func: "up",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function down()
 {
     let id = playerID;
+    let func = "down";
     socket.emit("updatePos", {
-        func: "down",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function left()
 {
     let id = playerID;
+    let func = "left";
     socket.emit("updatePos", {
-        func: "left",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function right()
 {
     let id = playerID;
+    let func = "right";
     socket.emit("updatePos", {
-        func: "right",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function notUp()
 {
     let id = playerID;
+    let func = "upStop";
     socket.emit("updatePos", {
-        func: "upStop",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function notDown()
 {
     let id = playerID;
+    let func = "downStop";
     socket.emit("updatePos", {
-        func: "downStop",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function notLeft()
 {
     let id = playerID;
+    let func = "leftStop";
     socket.emit("updatePos", {
-        func: "leftStop",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
 }
 
 function notRight()
 {
     let id = playerID;
+    let func = "rightStop";
     socket.emit("updatePos", {
-        func: "rightStop",
         id: id,
+        func: func,
     });
+    processMovementCmd(id, func);
+}
+
+function processMovementCmd(id, func)
+{
+    if (func === "run")
+    {
+        if (players[id].isTipToe)
+            players[id].isTipToe = false;
+        players[id].isRunning = true;
+    }
+    if (func === "runStop")
+    {
+        players[id].isRunning = false;
+    }
+    if (func === "tipToe")
+    {
+        if (players[id].isRunning)
+            players[id].isRunning = false;
+        players[id].isTipToe = true;
+    }
+    if (func === "tipToeStop")
+    {
+        players[id].isTipToe = false;
+    }
+    if (func === "upStop")
+    {
+        players[id].forwards = false;
+        players[id].backwards = false;
+    }
+    if (func === "downStop")
+    {
+        players[id].forwards = false;
+        players[id].backwards = false;
+    }
+    if (func === "leftStop")
+    {
+        players[id].strafeLeft = false;
+    }
+    if (func === "rightStop")
+    {
+        players[id].strafeRight = false;
+    }
+    if (func === "up")
+    {
+        players[id].forwards = true;
+        players[id].backwards = false;
+    }
+    if (func === "down")
+    {
+        players[id].forwards = false;
+        players[id].backwards = true;
+    }
+    if (func === "left")
+    {
+        players[id].strafeLeft = true;
+        players[id].strafeRight = false;
+    }
+    if (func === "right")
+    {
+        players[id].strafeLeft = false;
+        players[id].strafeRight = true;
+    }
 }
 
 function zoomCommon()

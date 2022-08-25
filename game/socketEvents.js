@@ -43,6 +43,7 @@ socket.on("disconnect", function(msg) {
 });
 
 socket.on('newPlayer', function(data) {
+    dump(data);
     mapData = data.mapData;
     let playerData = data.playerData;
     let id = playerData.playerID;
@@ -65,19 +66,54 @@ socket.on('maxInstances', function(data) {
 
 socket.on('userDisconnect', function(data) {
     let id = data.playerID;
+    dump("Disc: " + id);
     deletePlayer(id);
     players = data.players;
+    mapData = data.mapData;
+    dump(players);
 });
 
-socket.on('serverUpdate', function(data) {
-    mapData = data.mapData[playerID];
+socket.on('clientPlayerUpdate', function(data) {
     players = data.players;
-    for (let p in players)
+
+    /*
+    if (isDefined(playerID) && playerID !== false)
     {
-        //physics.player.body[p].position = players[p].body.position;
-        //physics.player.body[p].angle = players[p].body.angle;
-        //physics.player.body[p].velocity = players[p].body.velocity;
+        let angDist = angleDist(physics.player.body[playerID].angle, players[playerID].body.angle);
+        let dist = distance(physics.player.body[playerID].position, players[playerID].body.position);
+        physics.player.body[playerID].position = players[playerID].body.position;
+        if (dist > 50)
+        {
+            //dump("Client updated position from server");
+        }
+        physics.player.body[playerID].angle = players[playerID].body.angle;
+        if (toDeg(angDist) > 5)
+        {
+            //dump("Client updated angle from server");
+        }
+    }*/
+
+    //if (toDeg(abs(players[p].body.angularVelocity - physics.player.body[p].angularVelocity)) > 0)
+    //physics.player.body[p].angularVelocity = players[p].body.angularVelocity;
+    if (playerID !== false)
+        playerAngle = physics.player.body[playerID].angle;
+    else
+        playerAngle = 0;
+    for (let id in players)
+    {
+        id = parseInt(id);
+        if (isDefined(physics.player.body[id]))
+        {
+            physics.player.body[id].position = players[id].body.position;
+            physics.player.body[id].velocity = players[id].body.velocity;
+            physics.player.body[id].angle = players[id].body.angle;
+            physics.player.body[id].angularVelocity = players[id].body.angularVelocity;
+        }
     }
+});
+
+socket.on('clientMapUpdate', function(data) {
+    mapData = data.mapData;
 });
 
 socket.on('serverDump', function(data) {

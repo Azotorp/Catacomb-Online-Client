@@ -76,6 +76,7 @@ function clientReady()
             x: worldMousePos.x,
             y: worldMousePos.y,
         },
+        playerAngle: angle(worldMousePos),
         avatar: DISCORD_AVATAR,
         player: {
             width: gameObject.referencePlayer.width,
@@ -115,4 +116,27 @@ async function setup()
     Ticker.add(delta => gameLoop(delta));
     clientReady();
     setupLoaded = true;
+
+    physics.referencePlayer.body = new p2.Body({
+        mass: 100,
+        position: [0, 0],
+        angle: 0,
+    });
+    let width = gameObject.referencePlayer.width;
+    let height = gameObject.referencePlayer.height;
+    physics.referencePlayer.shape = new p2.Box({
+        width: width,
+        height: height,
+    });
+    physics.referencePlayer.shape.anchorRatio = {x: 0.237983, y: 0.547403};
+    physics.referencePlayer.shape.collisionGroup = 0;
+    physics.referencePlayer.shape.collisionMask = 0
+    physics.referencePlayer.body.object = "referencePlayer";
+    physics.referencePlayer.body.objectID = 0;
+    physics.referencePlayer.body.damping = 0;
+    physics.referencePlayer.body.centerMass = {x: (width / 2) - (width * physics.referencePlayer.shape.anchorRatio.x), y: (height / 2) - (height * physics.referencePlayer.shape.anchorRatio.y)};
+    physics.referencePlayer.body.addShape(physics.referencePlayer.shape, [physics.referencePlayer.body.centerMass.x, physics.referencePlayer.body.centerMass.y], toRad(0));
+    physics.world.addBody(physics.referencePlayer.body);
+
+
 }

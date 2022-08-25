@@ -34,6 +34,8 @@ let App = new Application({
 
 let frameTickTime;
 let FPS;
+let frames = 0;
+let playerAngle;
 let winCenterX = window.innerWidth / 2;
 let winCenterY = window.innerHeight / 2;
 let playerID = false;
@@ -88,6 +90,10 @@ const FLAG = {
 
 let physics = {
     player: {
+        body: {},
+        shape: {},
+    },
+    referencePlayer: {
         body: {},
         shape: {},
     },

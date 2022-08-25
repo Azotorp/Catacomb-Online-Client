@@ -50,8 +50,7 @@ function createPlayer(id)
         gameObject.playerLayer.addChild(gameObject.playerDiscordAvatar[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordUsername[id]);
         gameObject.playerLayer.addChild(gameObject.debugPlayerHudLayer[id]);
-        //physicsAddPlayer(id);
-
+        physicsAddPlayer(id);
     }
 }
 
@@ -109,7 +108,6 @@ function createWall(id, chunkPos)
     gameObject.debugWallHudLayer.addChild(gameObject.wallGrid[id]);
     gameObject.wallLayer.addChild(gameObject.wall[id]);
     gameObject.debugWallHudLayer.visible = false;
-    //physicsAddWall(id);
 }
 
 function createShadow(id)
@@ -138,48 +136,65 @@ function createShadow(id)
 
 function deleteFloor(id)
 {
-    gameObject.floorLayer.removeChild(gameObject.floor[id]);
-    gameObject.debugFloorHudLayer.removeChild(gameObject.debugFloorHud[id]);
-    gameObject.debugFloorHudLayer.removeChild(gameObject.floorGrid[id]);
-    delete gameObject.floor[id];
-    delete gameObject.debugFloorHud[id];
-    delete gameObject.floorGrid[id];
+    if (isDefined(gameObject.floor[id]))
+    {
+        gameObject.floorLayer.removeChild(gameObject.floor[id]);
+        delete gameObject.floor[id];
+    }
+    if (isDefined(gameObject.debugFloorHud[id]))
+    {
+        gameObject.debugFloorHudLayer.removeChild(gameObject.debugFloorHud[id]);
+        delete gameObject.debugFloorHud[id];
+    }
+    if (isDefined(gameObject.floorGrid[id]))
+    {
+        gameObject.debugFloorHudLayer.removeChild(gameObject.floorGrid[id]);
+        delete gameObject.floorGrid[id];
+    }
 }
 
 function deleteWall(id)
 {
-    gameObject.wallLayer.removeChild(gameObject.wall[id]);
-    gameObject.debugWallHudLayer.removeChild(gameObject.debugWallHud[id]);
-    gameObject.debugWallHudLayer.removeChild(gameObject.wallGrid[id]);
-    //physics.world.removeBody(physics.wall.body[id]);
-    delete gameObject.wall[id];
-    delete gameObject.debugWallHud[id];
-    delete gameObject.wallGrid[id];
-    //delete physics.wall.body[id];
-    //delete physics.wall.shape[id];
+    if (isDefined(gameObject.wall[id]))
+    {
+        gameObject.wallLayer.removeChild(gameObject.wall[id]);
+        delete gameObject.wall[id];
+    }
+    if (isDefined(gameObject.debugWallHud[id]))
+    {
+        gameObject.debugWallHudLayer.removeChild(gameObject.debugWallHud[id]);
+        delete gameObject.debugWallHud[id];
+    }
+    if (isDefined(gameObject.wallGrid[id]))
+    {
+        gameObject.debugWallHudLayer.removeChild(gameObject.wallGrid[id]);
+        delete gameObject.wallGrid[id];
+    }
 }
 
 function deleteShadow(id)
 {
+    if (!isDefined(gameObject.shadowOverlay[id]))
+        return;
     gameObject.shadowOverlayLayer.removeChild(gameObject.shadowOverlay[id]);
     delete gameObject.shadowOverlay[id];
 }
 
 function deletePlayer(id)
 {
-    gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
+    //gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
     gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
     gameObject.playerLayer.removeChild(gameObject.player[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
-    //physics.world.removeBody(physics.player.body[id]);
+    physics.world.removeBody(physics.player.body[id]);
     delete gameObject.player[id];
     delete gameObject.playerDiscordUsername[id];
     delete gameObject.playerDiscordAvatar[id];
     delete gameObject.debugPlayerHudLayer[id];
     delete gameObject.debugPlayerHud[id];
-    //delete physics.player.body[id];
-    //delete physics.player.shape[id];
+    delete physics.player.body[id];
+    delete physics.player.shape[id];
 }
 
 function deleteShadows()
