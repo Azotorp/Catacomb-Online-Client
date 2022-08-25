@@ -7,16 +7,6 @@ function play(delta) {
     let mouseAngle;
     if (isDefined(players))
     {
-        if (playerID !== false)
-        {
-            if (isDefined(gameObject.player[playerID]))
-            {
-                App.stage.pivot.x = players[playerID].body.position[0];
-                App.stage.pivot.y = players[playerID].body.position[1];
-            }
-            mouseAngle = angle({x: physics.player.body[playerID].position[0], y: physics.player.body[playerID].position[1]}, worldMousePos);
-        }
-
         for (let id in players)
         {
             id = parseInt(id);
@@ -69,6 +59,8 @@ function play(delta) {
 
         if (playerID !== false)
         {
+            App.stage.pivot.x = players[playerID].body.position[0];
+            App.stage.pivot.y = players[playerID].body.position[1];
             mouseAngle = angle({x: physics.player.body[playerID].position[0], y: physics.player.body[playerID].position[1]}, worldMousePos);
 
             let angleDistance = angleDist(mouseAngle, physics.player.body[playerID].angle);
