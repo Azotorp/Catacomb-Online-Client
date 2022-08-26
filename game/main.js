@@ -9,7 +9,6 @@ function play(delta) {
     {
         for (let id in players)
         {
-            id = parseInt(id);
             if (isDefined(gameObject.player[id]))
             {
                 let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
@@ -86,7 +85,6 @@ function play(delta) {
             {
                 if (isDefined(players[playerID]))
                 {
-                    //dump(objLength(mapData, true)+ " " + (objLength(gameObject.floor, true) + objLength(gameObject.wall, true)) + " " + objLength(gameObject.shadowOverlay, true));
                     for (let xyKey in mapData)
                     {
                         mapData[xyKey].chunkRendered = false;
@@ -110,7 +108,7 @@ function play(delta) {
                             }
                         }
                     }
-                    if (objLength(foundTile, true) > 0)
+                    if (objLength(foundTile) > 0)
                     {
                         for (let id in foundTile)
                         {

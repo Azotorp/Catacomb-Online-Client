@@ -34,9 +34,8 @@ function createPlayer(id)
         gameObject.debugPlayerHudLayer[id].addChild(gameObject.debugPlayerHud[id]);
         gameObject.debugPlayerHudLayer[id].visible = false;
 
-        if (players[id].uuid === uuid)
+        if (id === playerID)
         {
-            playerID = id;
             gameObject.playerFOVScanMask = new Graphics();
             gameObject.playerFOVScanMask.scale.x = 1;
             gameObject.playerFOVScanMask.scale.y = -1;
@@ -45,7 +44,9 @@ function createPlayer(id)
             //gameObject.worldLayer.addChild(gameObject.playerFOVScanMask);
             gameObject.catacombLayer.mask = gameObject.playerFOVScanMaskLayer;
         }
+
         gameObject.player[id].playerID = players[id].playerID;
+        gameObject.player[id].play();
         gameObject.playerLayer.addChild(gameObject.player[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordAvatar[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordUsername[id]);
@@ -199,7 +200,7 @@ function deletePlayer(id)
 
 function deleteShadows()
 {
-    if (objLength(gameObject.shadowOverlay, true) > 0)
+    if (objLength(gameObject.shadowOverlay) > 0)
     {
         for (let id in gameObject.shadowOverlay)
         {
@@ -210,7 +211,7 @@ function deleteShadows()
 
 function deleteWalls()
 {
-    if (objLength(gameObject.wall, true) > 0)
+    if (objLength(gameObject.wall) > 0)
     {
         for (let id in gameObject.wall)
         {
@@ -221,7 +222,7 @@ function deleteWalls()
 
 function deleteFloors()
 {
-    if (objLength(gameObject.floor, true) > 0)
+    if (objLength(gameObject.floor) > 0)
     {
         for (let id in gameObject.floor)
         {
@@ -232,7 +233,7 @@ function deleteFloors()
 
 function deletePlayers()
 {
-    if (objLength(gameObject.player, true) > 0)
+    if (objLength(gameObject.player) > 0)
     {
         for (let id in gameObject.player)
         {

@@ -45,12 +45,15 @@ socket.on("disconnect", function(msg) {
 socket.on('newPlayer', function(data) {
     dump(data);
     mapData = data.mapData;
-    let playerData = data.playerData;
-    let id = playerData.playerID;
-    if (!isDefined(gameObject.player[id]))
+    let newPlayerID = data.newPlayerID;
+    players = data.players;
+    if (players[newPlayerID].uuid === uuid)
     {
-        players = data.players;
-        createPlayer(id);
+        playerID = newPlayerID;
+    }
+    if (!isDefined(gameObject.player[newPlayerID]))
+    {
+        createPlayer(newPlayerID);
     }
 });
 
@@ -101,7 +104,6 @@ socket.on('clientPlayerUpdate', function(data) {
         playerAngle = 0;
     for (let id in players)
     {
-        id = parseInt(id);
         if (isDefined(physics.player.body[id]))
         {
             physics.player.body[id].position = players[id].body.position;

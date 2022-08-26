@@ -175,14 +175,11 @@ function renderCullLoop(object, method)
     }
 }
 
-function objLength(obj, keyLength = false)
+function objLength(obj)
 {
-    if (!Array.isArray(obj))
+    if (isObj(obj))
     {
-        if (keyLength)
-            return Object.keys(obj).length;
-        else
-            return 0;
+        return Object.keys(obj).length;
     } else {
         return obj.length;
     }

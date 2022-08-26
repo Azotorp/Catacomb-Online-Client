@@ -84,7 +84,9 @@ function clientReady()
         },
         winCenterX: winCenterX,
         winCenterY: winCenterY,
-        zoom: zoom,
+        worldZoom: zoom,
+        fps: FPS,
+        frameTickTime: frameTickTime,
     });
 }
 
@@ -137,6 +139,4 @@ async function setup()
     physics.referencePlayer.body.centerMass = {x: (width / 2) - (width * physics.referencePlayer.shape.anchorRatio.x), y: (height / 2) - (height * physics.referencePlayer.shape.anchorRatio.y)};
     physics.referencePlayer.body.addShape(physics.referencePlayer.shape, [physics.referencePlayer.body.centerMass.x, physics.referencePlayer.body.centerMass.y], toRad(0));
     physics.world.addBody(physics.referencePlayer.body);
-
-
 }
