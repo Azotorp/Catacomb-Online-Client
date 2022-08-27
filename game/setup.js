@@ -24,11 +24,12 @@ gameObject.catacombLayer.addChild(gameObject.visionLayer);
 gameObject.worldLayer.addChild(gameObject.wallLayer);
 gameObject.catacombLayer.addChild(gameObject.shadowOverlayLayer);
 gameObject.catacombLayer.addChild(gameObject.playerFOVScanMaskLayer);
+gameObject.catacombLayer.addChild(gameObject.laserLayer);
 gameObject.catacombLayer.addChild(gameObject.playerLayer);
 gameObject.worldLayer.addChild(gameObject.debugWorldHudLayer);
 gameObject.debugWorldHudLayer.addChild(gameObject.debugFloorHudLayer);
 gameObject.debugWorldHudLayer.addChild(gameObject.debugWallHudLayer);
-
+gameObject.worldLayer.interactive = true;
 localMousePos = App.renderer.plugins.interaction.mouse.global;
 worldMousePos = App.stage.toLocal(localMousePos);
 
@@ -37,10 +38,25 @@ window.addEventListener('mousewheel', (ev) => {
     mouseWheel(ev.deltaY);
 });
 
+App.stage.interactive = true;
+App.stage.on('touchmove', touchDrag);
+App.stage.on('touchstart', touchDown);
+App.stage.on('touchend', touchUp);
+App.stage.on('mousedown', leftclick);
+App.stage.on('rightdown', rightclick);
+App.stage.on('mouseup', leftunclick);
+App.stage.on('rightup', rightunclick);
+
+window.oncontextmenu = function() {
+    return false;
+};
 
 //document.querySelector('#frame').appendChild(App.view);
 function setupLoader()
 {
+    Loader.add("laserDot", "images/laser/laserDot.png");
+    Loader.add("laserGlow", "images/laser/laserGlow.png");
+    Loader.add("laserBeam", "images/laser/laserBeam.png");
     Loader.add("wall", "images/map/wall.png");
     Loader.add("floor", "images/map/floor.png");
     Loader.add("player","images/player/player.json");
@@ -64,6 +80,7 @@ function setupLoader()
 
 function clientReady()
 {
+    ping();
     socket.emit("clientReady", {
         auth: {
             level: AUTH_LEVEL,
@@ -87,6 +104,7 @@ function clientReady()
         worldZoom: zoom,
         fps: FPS,
         frameTickTime: frameTickTime,
+        playerOutlinePath: playerOutlinePath,
     });
 }
 
@@ -113,6 +131,10 @@ async function setup()
     gameObject.referencePlayer = new PIXI.AnimatedSprite(gameObject.playerSheet.animations["player/rifle/idle/survivor-idle_rifle"]);
     gameObject.referencePlayer.scale.x = playerScale;
     gameObject.referencePlayer.scale.y = -playerScale;
+
+    playerOutlinePath = getOutlinePath(gameObject.referencePlayer, playerAnchorRatio);
+
+
     loadKeyBindings();
     state = play;
     Ticker.add(delta => gameLoop(delta));
@@ -139,4 +161,5 @@ async function setup()
     physics.referencePlayer.body.centerMass = {x: (width / 2) - (width * physics.referencePlayer.shape.anchorRatio.x), y: (height / 2) - (height * physics.referencePlayer.shape.anchorRatio.y)};
     physics.referencePlayer.body.addShape(physics.referencePlayer.shape, [physics.referencePlayer.body.centerMass.x, physics.referencePlayer.body.centerMass.y], toRad(0));
     physics.world.addBody(physics.referencePlayer.body);
+    document.getElementById('frame').style.cursor = "none";
 }

@@ -43,13 +43,13 @@ socket.on("disconnect", function(msg) {
 });
 
 socket.on('newPlayer', function(data) {
-    dump(data);
     mapData = data.mapData;
     let newPlayerID = data.newPlayerID;
     players = data.players;
     if (players[newPlayerID].uuid === uuid)
     {
         playerID = newPlayerID;
+        localPlayer = players[playerID];
     }
     if (!isDefined(gameObject.player[newPlayerID]))
     {
@@ -73,7 +73,6 @@ socket.on('userDisconnect', function(data) {
     deletePlayer(id);
     players = data.players;
     mapData = data.mapData;
-    dump(players);
 });
 
 socket.on('clientPlayerUpdate', function(data) {
@@ -106,9 +105,34 @@ socket.on('clientPlayerUpdate', function(data) {
     {
         if (isDefined(physics.player.body[id]))
         {
-            physics.player.body[id].position = players[id].body.position;
+            let lastIndex = players[id].body.movementHistory.length - 1;
+            let clientTimestamp = Date.now() / 1000;
+            let serverTimestamp1 = players[id].body.movementHistory[lastIndex].timestamp;
+            let serverTimestamp2 = players[id].body.movementHistory[lastIndex - 1].timestamp;
+            let mousePos1 = players[id].body.movementHistory[lastIndex].mouse;
+            let mousePos2 = players[id].body.movementHistory[lastIndex - 1].mouse;
+            let angle1 = players[id].body.movementHistory[lastIndex].angle;
+            let angle2 = players[id].body.movementHistory[lastIndex - 1].angle;
+            //dump((serverTimestamp - clientTimestamp) * 1000 + "ms");
+            //dump((serverTimestamp1 - serverTimestamp2) * 1000 + " ms");
+
+            let clientServerPosDifference = {
+                x: physics.player.body[id].position[0] - players[id].body.position[0],
+                y: physics.player.body[id].position[1] - players[id].body.position[1],
+            };
+            //dump(localPosFactor);
+            let newPosition;
+            if (physics.player.body[id].velocity[0] === 0 && physics.player.body[id].velocity[1] === 0)
+            {
+                newPosition = {x : players[id].body.position[0], y: players[id].body.position[1]};
+            } else {
+                newPosition = lerp2D(physics.player.body[id].position, players[id].body.position, frameTickTime / serverPing);
+            }
+            players[id].mouse = lerp2D(mousePos1, players[id].mouse, frameTickTime / serverPing);
+            physics.player.body[id].position[0] = newPosition.x
+            physics.player.body[id].position[1] = newPosition.y;
             physics.player.body[id].velocity = players[id].body.velocity;
-            physics.player.body[id].angle = players[id].body.angle;
+            physics.player.body[id].angle = lerp1D(angle1, players[id].body.angle, frameTickTime / serverPing);//players[id].body.angle;
             physics.player.body[id].angularVelocity = players[id].body.angularVelocity;
         }
     }
@@ -123,3 +147,15 @@ socket.on('serverDump', function(data) {
     dump(JSON.parse(data));
     dump("###################### DUMP -- Zombie-Server -- DUMP ######################")
 });
+
+socket.on("ping", function (data) {
+    let timestamp = Date.now() / 1000;
+    let pingReplyTime = (timestamp - data.clientTimestamp) * 1000;
+    serverPing = pingReplyTime / 2;
+    if (data.log)
+    {
+        dump("PING REPLY: " + pingReplyTime.toFixed(0) + " ms");
+        dump("SERVER PING: " + (pingReplyTime / 2).toFixed(0) + " ms");
+        dump(data);
+    }
+})

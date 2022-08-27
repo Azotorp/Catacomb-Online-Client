@@ -123,9 +123,9 @@ var keybindings = {
         key: "F10",
         code: 121,
         function: {
-            down: "",
+            down: "ping",
             up: "",
-            params_down: [],
+            params_down: [true],
             params_up: [],
             holdrepeat: false,
         },

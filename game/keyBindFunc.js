@@ -134,62 +134,71 @@ function processMovementCmd(id, func)
 {
     if (func === "run")
     {
-        if (players[id].isTipToe)
-            players[id].isTipToe = false;
-        players[id].isRunning = true;
+        if (localPlayer.isTipToe)
+            localPlayer.isTipToe = false;
+        localPlayer.isRunning = true;
     }
     if (func === "runStop")
     {
-        players[id].isRunning = false;
+        localPlayer.isRunning = false;
     }
     if (func === "tipToe")
     {
-        if (players[id].isRunning)
-            players[id].isRunning = false;
-        players[id].isTipToe = true;
+        if (localPlayer.isRunning)
+            localPlayer.isRunning = false;
+        localPlayer.isTipToe = true;
     }
     if (func === "tipToeStop")
     {
-        players[id].isTipToe = false;
+        localPlayer.isTipToe = false;
     }
     if (func === "upStop")
     {
-        players[id].forwards = false;
-        players[id].backwards = false;
+        localPlayer.forwards = false;
+        localPlayer.backwards = false;
     }
     if (func === "downStop")
     {
-        players[id].forwards = false;
-        players[id].backwards = false;
+        localPlayer.forwards = false;
+        localPlayer.backwards = false;
     }
     if (func === "leftStop")
     {
-        players[id].strafeLeft = false;
+        localPlayer.strafeLeft = false;
     }
     if (func === "rightStop")
     {
-        players[id].strafeRight = false;
+        localPlayer.strafeRight = false;
     }
     if (func === "up")
     {
-        players[id].forwards = true;
-        players[id].backwards = false;
+        localPlayer.forwards = true;
+        localPlayer.backwards = false;
     }
     if (func === "down")
     {
-        players[id].forwards = false;
-        players[id].backwards = true;
+        localPlayer.forwards = false;
+        localPlayer.backwards = true;
     }
     if (func === "left")
     {
-        players[id].strafeLeft = true;
-        players[id].strafeRight = false;
+        localPlayer.strafeLeft = true;
+        localPlayer.strafeRight = false;
     }
     if (func === "right")
     {
-        players[id].strafeLeft = false;
-        players[id].strafeRight = true;
+        localPlayer.strafeLeft = false;
+        localPlayer.strafeRight = true;
     }
+}
+
+function ping(log = false)
+{
+    let timestamp = Date.now() / 1000;
+    socket.emit("ping", {
+        timestamp: timestamp,
+        log: log,
+    });
 }
 
 function zoomCommon()

@@ -38,6 +38,27 @@ function nthRoot(num, root)
     return pow(num, 1 / root);
 }
 
+function lerp2D(startPos, endPos, t)
+{
+    if (t < 0)
+        t = 0;
+    if (t > 1)
+        t = 1;
+    return {
+        x: (1 - t) * (!isDefined(startPos[0]) ? startPos.x : startPos[0]) + t * (!isDefined(endPos[0]) ? endPos.x : endPos[0]),
+        y: (1 - t) * (!isDefined(startPos[1]) ? startPos.y : startPos[1]) + t * (!isDefined(endPos[1]) ? endPos.y : endPos[1]),
+    };
+}
+
+function lerp1D(startPos, endPos, t)
+{
+    if (t < 0)
+        t = 0;
+    if (t > 1)
+        t = 1;
+    return (1 - t) * startPos + t * endPos;
+}
+
 function distance(obj1, obj2 = false)
 {
     if (!isObj(obj1))
@@ -308,13 +329,23 @@ function shuffleArray(array)
     return array.map(value => ({ value, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ value }) => value);
 }
 
-function xyArrayConvTo1D(array) // [[x1, y1], [x2, y2], ..]
+function xyArrayConvTo1D(array)
 {
     let ar = [];
     for (let n in array)
     {
         ar.push(array[n][0]);
         ar.push(array[n][1]);
+    }
+    return ar;
+}
+
+function xyArrayConvTo2D(array)
+{
+    let ar = [];
+    for (let n = 0; n < array.length / 2; n++)
+    {
+        ar.push([array[n * 2], array[n * 2 + 1]]);
     }
     return ar;
 }
@@ -415,6 +446,15 @@ function hexColorToInt(hex)
     return parseInt(hexColorDeHashTag(hex), 16);
 }
 
+function intColorToRGBA(int) {
+    int >>>= 0;
+    let b = int & 0xFF,
+        g = (int & 0xFF00) >>> 8,
+        r = (int & 0xFF0000) >>> 16,
+        a = ((int & 0xFF000000) >>> 24) / 255;
+    return {r: r, g: g, b: b, a: a};
+}
+
 function intColorToHex(int)
 {
     return int.toString(16).padStart(6, "0");
@@ -425,14 +465,13 @@ function isString(data)
     return typeof data === 'string' || data instanceof String;
 }
 
-function rgbaToIntoColor(red, green, blue, alpha = 1)
+function rgbaToIntoColor(red, green, blue)
 {
-    let r = red & 0xFF;
-    let g = green & 0xFF;
-    let b = blue & 0xFF;
-    let a = alpha & 0xFF;
+    let r = red;// & 0xFF;
+    let g = green;// & 0xFF;
+    let b = blue;// & 0xFF;
 
-    return (r << 24) + (g << 16) + (b << 8) + (a);
+    return (r << 16) + (g << 8) + b;
 }
 
 function aOverBColor(cA, cB, aA = 1, aB = 1, output = "{}") // 0x / # / [] // {}
@@ -586,6 +625,67 @@ function genOddShapePath(px, py, hMin, vMin, step, minMin, scaleX = 1, scaleY = 
         path.push((py + cords[k].nY) * scaleY);
     }
     return [path, minDist, maxDist];
+}
+
+function getPixels(obj, anchor = {x: 0, y: 0}, ignoreZeroAlpha = false)
+{
+    let pixels = App.renderer.extract.pixels(obj);
+    return {
+        pixels: buildImageData(pixels, obj, anchor, ignoreZeroAlpha),
+        width: obj.width,
+        height: obj.height,
+    }
+}
+
+function buildImageData(pixels, obj, anchor, ignoreZeroAlpha = false)
+{
+    let pos = {x: 0, y: 0};
+    let data = {};
+    let rgbaPos = 0;
+    let rgbaData = [];
+    let scale = obj.scale;
+    let width = obj.width;
+    let height = obj.height;
+    let dataWidth = parseInt(width / scale.x);
+    for (let k in pixels)
+    {
+        let bit = pixels[k];
+        rgbaData.push(bit);
+        rgbaPos++;
+        if (rgbaPos >= 4)
+        {
+            rgbaPos = 0;
+            let color = {
+                r: rgbaData[0],
+                g: rgbaData[1],
+                b: rgbaData[2],
+                a: rgbaData[3] / 255,
+            };
+            rgbaData = [];
+            if (color.a > 0 || !ignoreZeroAlpha)
+            {
+                let nPos = {x: parseInt((pos.x * scale.x) - width * anchor.x), y: parseInt((pos.y * scale.y) + height * anchor.y)};
+                let xyKey = getXYKey(nPos);
+                data[xyKey] = {
+                    x: nPos.x,
+                    y: nPos.y,
+                    color: {
+                        red: color.r,
+                        green: color.g,
+                        blue: color.b,
+                        alpha: color.a,
+                    }
+                };
+            }
+            pos.x++;
+        }
+        if (pos.x >= dataWidth)
+        {
+            pos.x = 0;
+            pos.y++;
+        }
+    }
+    return data;
 }
 
 function genEggShapePath(px, py, h, v, step, z, zAcc, scaleX = 1, scaleY = 1)

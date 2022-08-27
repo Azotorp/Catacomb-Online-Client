@@ -2,6 +2,9 @@ function physicsAddPlayer(id)
 {
     if (isDefined(physics.player.body[id]))
         return;
+    let sendOutline = false;
+    if (objLength(physics.player.body) > 0)
+        sendOutline = true;
     physics.player.body[id] = new p2.Body({
         mass: 100,
         position: [players[id].body.position[0], players[id].body.position[1]],
@@ -9,11 +12,27 @@ function physicsAddPlayer(id)
     });
     let width = gameObject.player[id].width;
     let height = gameObject.player[id].height;
+
+    //physics.player.shape[id] = new p2.Convex({vertices: playerOutlinePath});
+
+    /*physics.player.body[id].fromPolygon(playerOutlinePath, {skipSimpleCheck: true});
+    physics.player.body[id].object = "player";
+    physics.player.body[id].objectID = id;
+    for (let s in physics.player.body[id].shapes)
+    {
+        physics.player.body[id].shapes[s].collisionGroup = FLAG.PLAYER;
+        physics.player.body[id].shapes[s].collisionMask = FLAG.WALL | FLAG.BULLET | FLAG.VISION_GOGGLES | FLAG.PLAYER | FLAG.ZOMBIE | FLAG.AMMO_CLIP;;
+    }
+
+     */
+
+
+
     physics.player.shape[id] = new p2.Box({
         width: width,
         height: height,
     });
-    physics.player.shape[id].anchorRatio = {x: 0.237983, y: 0.547403};
+    physics.player.shape[id].anchorRatio = playerAnchorRatio;
     physics.player.shape[id].collisionGroup = FLAG.PLAYER;
     physics.player.shape[id].collisionMask = FLAG.WALL | FLAG.BULLET | FLAG.VISION_GOGGLES | FLAG.PLAYER | FLAG.ZOMBIE | FLAG.AMMO_CLIP;;
     physics.player.body[id].object = "player";
@@ -21,6 +40,7 @@ function physicsAddPlayer(id)
     physics.player.body[id].damping = 0;
     physics.player.body[id].centerMass = {x: (width / 2) - (width * physics.player.shape[id].anchorRatio.x), y: (height / 2) - (height * physics.player.shape[id].anchorRatio.y)};
     physics.player.body[id].addShape(physics.player.shape[id], [physics.player.body[id].centerMass.x, physics.player.body[id].centerMass.y], toRad(0));
+    //physics.player.body[id].addShape(physics.player.shape[id], [0, 0], toRad(0));
     physics.world.addBody(physics.player.body[id]);
 }
 
@@ -56,4 +76,70 @@ function physicsDeleteWall(id)
     physics.world.removeBody(physics.wall.body[id]);
     delete physics.wall.body[id];
     delete physics.wall.shape[id];
+}
+
+function rayCast(origin, endPos, collisionMask, skipBackTraces = true)
+{
+    let rayCast = {
+        result: new p2.RaycastResult(),
+        hitPoint: p2.vec2.create(),
+        rayClosest: new p2.Ray({
+            mode: p2.Ray.CLOSEST,
+            collisionMask: collisionMask,
+            skipBackfaces: skipBackTraces,
+        }),
+    };
+
+    p2.vec2.copy(rayCast.rayClosest.from, [origin.x, origin.y]);
+    p2.vec2.copy(rayCast.rayClosest.to, [endPos.x, endPos.y]);
+    rayCast.rayClosest.update();
+    physics.world.raycast(rayCast.result, rayCast.rayClosest);
+    rayCast.result.getHitPoint(rayCast.hitPoint, rayCast.rayClosest);
+    //rayCast.result.reset();
+    if (rayCast.result.body !== null)
+    {
+        return {
+            x: rayCast.hitPoint[0],
+            y: rayCast.hitPoint[1],
+            body: rayCast.result.body,
+        };
+    } else {
+        return {
+            x: endPos.x,
+            y: endPos.y,
+            body: false,
+        };
+    }
+}
+
+function getOutlinePath(obj, anchorRatio = {x: 0, y: 0})
+{
+    let playerPixels = getPixels(obj, anchorRatio, true);
+    let outlineData = {};
+    let origin = {x: 0, y: 0};
+    for (let a = 0; a < 360; a += 1)
+    {
+        let dist = distance({x: obj.width, y: obj.height}) * 2;
+        for (let d = dist; d > 0; d--)
+        {
+            let pos = {x: parseInt(origin.x + cos(toRad(a)) * d), y: parseInt(origin.y - sin(toRad(a)) * d)};
+            let xyKey = getXYKey(pos);
+            if (isDefined(playerPixels.pixels[xyKey]))
+            {
+                outlineData[xyKey] = {x: playerPixels.pixels[xyKey].x, y: playerPixels.pixels[xyKey].y, ang: a};
+                break;
+            }
+        }
+    }
+    outlineData = Object.values(outlineData);
+    outlineData.sort(function (a,b) {
+        return a.ang - b.ang;
+    });
+    let outlinePath = [];
+    for (let xyKey in outlineData)
+    {
+        outlinePath.push([outlineData[xyKey].x, outlineData[xyKey].y]);
+    }
+    outlinePath.reverse();
+    return outlinePath;
 }

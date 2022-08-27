@@ -113,6 +113,7 @@ if ($auth < $access_levels["Member"])
 <script src="game/drawFunc.js"></script>
 <script src="game/filters.js"></script>
 <script src="game/keyBindings.js"></script>
+<script src="game/mouse.js"></script>
 <script src="game/setup.js"></script>
 <script src="game/main.js"></script>
 <script src="game/physics.js"></script>

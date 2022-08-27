@@ -4,62 +4,21 @@ function play(delta) {
     FPS = 1000 / frameTickTime;
     localMousePos = App.renderer.plugins.interaction.mouse.global;
     worldMousePos = App.stage.toLocal(localMousePos);
+    mouseButtons();
     let mouseAngle;
+    if (frames % 60 === 0)
+        ping();
+    let muzzleOffset = {
+        length: muzzlePosOffset.x * playerScale,
+        width: muzzlePosOffset.y * playerScale,
+    };
     if (isDefined(players))
     {
-        for (let id in players)
-        {
-            if (isDefined(gameObject.player[id]))
-            {
-                let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
-                let playerDim = {x: gameObject.player[id].width, y: gameObject.player[id].height};
-
-                if (id === playerID)
-                {
-                    gameObject.player[id].x = physics.player.body[id].position[0];//players[id].body.position[0];
-                    gameObject.player[id].y = physics.player.body[id].position[1];//players[id].body.position[1];
-                    gameObject.player[id].rotation = physics.referencePlayer.body.angle;//mouseAngle;
-                    //players[id].body.angle = physics.player.body[id].angle;
-                } else {
-                    //gameObject.player[id].x = players[id].body.position[0];
-                    //gameObject.player[id].y = players[id].body.position[1];
-                    //gameObject.player[id].rotation = players[id].body.angle;
-                    gameObject.player[id].x = physics.player.body[id].position[0];
-                    gameObject.player[id].y = physics.player.body[id].position[1];
-                    gameObject.player[id].rotation = physics.player.body[id].angle;
-                }
-                gameObject.playerDiscordAvatar[id].x = players[id].body.position[0];
-                gameObject.playerDiscordAvatar[id].y = (players[id].body.angle >= 0 && toDeg(players[id].body.angle) <= 180) ? players[id].body.position[1] + 10 + (playerDim.y / 2) + (avatarDim.y / 2) + Math.abs(Math.sin(players[id].body.angle) * (playerDim.x - avatarDim.y)) : players[id].body.position[1] + 10 + (playerDim.y / 2) + (avatarDim.y / 2);
-                gameObject.playerDiscordUsername[id].x = gameObject.playerDiscordAvatar[id].x + (avatarDim.x / 2) + 10;
-                gameObject.playerDiscordUsername[id].y = gameObject.playerDiscordAvatar[id].y;
-                drawText(gameObject.debugPlayerHud[id], "FPS: "+FPS.toFixed(1)+" "+players[id].chunkPos[0]+" : "+players[id].chunkPos[1]+" ("+toDeg(players[id].body.angle).toFixed(0)+")", false, true);
-                gameObject.debugPlayerHudLayer[id].position = gameObject.player[id].position;
-                if (id === playerID)
-                {
-                    gameObject.playerDiscordAvatar[id].visible = false;
-                    gameObject.playerDiscordUsername[id].visible = false;
-                } else {
-                    gameObject.playerDiscordAvatar[id].visible = true;
-                    gameObject.playerDiscordUsername[id].visible = true;
-                }
-                if (debug)
-                    gameObject.debugPlayerHudLayer[id].visible = true;
-                else
-                    gameObject.debugPlayerHudLayer[id].visible = false;
-                if (shadows)
-                    gameObject.shadowOverlayLayer.visible = true;
-                else
-                    gameObject.shadowOverlayLayer.visible = false;
-            } else {
-                createPlayer(id);
-            }
-            updatePlayerPos(id);
-        }
-
         if (playerID !== false)
         {
-            App.stage.pivot.x = players[playerID].body.position[0];
-            App.stage.pivot.y = players[playerID].body.position[1];
+            App.stage.pivot.x = physics.player.body[playerID].position[0];
+            App.stage.pivot.y = physics.player.body[playerID].position[1];
+
             mouseAngle = angle({x: physics.player.body[playerID].position[0], y: physics.player.body[playerID].position[1]}, worldMousePos);
 
             let angleDistance = angleDist(mouseAngle, physics.player.body[playerID].angle);
@@ -81,6 +40,104 @@ function play(delta) {
                 physics.referencePlayer.body.angularVelocity = 0;
                 physics.referencePlayer.body.angle = mouseAngle;
             }
+            updateLocalPlayerPos();
+        }
+        for (let id in players)
+        {
+            if (isDefined(gameObject.player[id]))
+            {
+                worldMouseChunkPos[id] = calcChunkPos(players[id].mouse, gridSize);
+                let avatarDim = {x: gameObject.playerDiscordAvatar[id].width, y: gameObject.playerDiscordAvatar[id].height};
+                let playerDim = {x: gameObject.player[id].width, y: gameObject.player[id].height};
+
+                gameObject.player[id].x = physics.player.body[id].position[0];
+                gameObject.player[id].y = physics.player.body[id].position[1];
+
+
+
+                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0], players[id].body.position[1] - 50, players[id].body.position[0], players[id].body.position[1] + 50, 0x00ff00, 1, 1,true);
+                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0] - 50, players[id].body.position[1], players[id].body.position[0] + 50, players[id].body.position[1], 0x00ff00, 1, 1);
+                if (id === playerID)
+                {
+                    gameObject.player[id].rotation = physics.referencePlayer.body.angle; // use a local angle to not get crazy jitters
+                } else {
+                    gameObject.player[id].rotation = physics.player.body[id].angle;
+                }
+                gameObject.player[id].muzzleOrigin = {
+                    x: gameObject.player[id].x + (cos(gameObject.player[id].rotation) * muzzleOffset.length - cos(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width),
+                    y: gameObject.player[id].y + (sin(gameObject.player[id].rotation) * muzzleOffset.length - sin(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width)
+                };
+                let mousePos;
+                if (id === playerID)
+                    mousePos = worldMousePos;
+                else
+                    mousePos = players[id].mouse;
+                let crossHairMousePos = {
+                    x: mousePos.x - cos(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width,
+                    y: mousePos.y - sin(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width,
+                };
+                let laserDistance = distance(gameObject.player[id].muzzleOrigin, crossHairMousePos);
+                //gameObject.playerLaser[id].beam.scale.x = laserDistance / 256;
+                let laserRayCastEndPos = {
+                    x: gameObject.player[id].muzzleOrigin.x + cos(gameObject.player[id].rotation) * laserDistance,
+                    y: gameObject.player[id].muzzleOrigin.y + sin(gameObject.player[id].rotation) * laserDistance,
+                };
+                laserDistance = distance(gameObject.player[id].muzzleOrigin, laserRayCastEndPos);
+
+                laserRayCast[id] = rayCast(gameObject.player[id].muzzleOrigin, laserRayCastEndPos);
+                laserDistance = distance(gameObject.player[id].muzzleOrigin, laserRayCast[id]);
+                gameObject.playerLaser[id].beam.scale.x = laserDistance / 256;
+
+                gameObject.playerLaser[id].dot.position = laserRayCast[id];
+
+                if (id === playerID)
+                {
+                    gameObject.playerCrosshair.position = laserRayCast[id];
+                    gameObject.playerMousePointer.position = crossHairMousePos;
+                    if (laserRayCast[id].body)
+                    {
+                        gameObject.playerMousePointer.visible = true;
+                    } else {
+                        gameObject.playerMousePointer.visible = false;
+                    }
+                }
+                gameObject.playerLaserLayer[id].x = gameObject.player[id].x;
+                gameObject.playerLaserLayer[id].y = gameObject.player[id].y;
+                gameObject.playerLaserLayer[id].rotation = gameObject.player[id].rotation;
+                gameObject.playerDiscordAvatar[id].x = gameObject.player[id].x;
+                gameObject.playerDiscordAvatar[id].y = (physics.player.body[id].angle >= 0 && toDeg(gameObject.player[id].rotation) <= 180) ? gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2) + Math.abs(Math.sin(gameObject.player[id].rotation) * (playerDim.x - avatarDim.y)) : gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2);
+                gameObject.playerDiscordUsername[id].x = gameObject.playerDiscordAvatar[id].x + (avatarDim.x / 2) + 10;
+                gameObject.playerDiscordUsername[id].y = gameObject.playerDiscordAvatar[id].y;
+                drawText(gameObject.debugPlayerHud[id], "FPS: "+FPS.toFixed(1)+" "+players[id].chunkPos[0]+" : "+players[id].chunkPos[1]+" ("+toDeg(players[id].body.angle).toFixed(0)+")", false, true);
+                gameObject.debugPlayerHudLayer[id].position = gameObject.player[id].position;
+                if (id === playerID)
+                {
+                    gameObject.playerDiscordAvatar[id].visible = false;
+                    gameObject.playerDiscordUsername[id].visible = false;
+                } else {
+                    gameObject.playerDiscordAvatar[id].visible = true;
+                    gameObject.playerDiscordUsername[id].visible = true;
+                }
+                if (debug)
+                {
+                    gameObject.playerPosCheck[id].visible = true;
+                    gameObject.debugPlayerHudLayer[id].visible = true;
+                } else {
+                    gameObject.playerPosCheck[id].visible = false;
+                    gameObject.debugPlayerHudLayer[id].visible = false;
+                }
+                if (shadows)
+                    gameObject.shadowOverlayLayer.visible = true;
+                else
+                    gameObject.shadowOverlayLayer.visible = false;
+            } else {
+                createPlayer(id);
+            }
+            updatePlayerPos(id);
+        }
+
+        if (playerID !== false)
+        {
             if (isDefined(mapData))
             {
                 if (isDefined(players[playerID]))
@@ -123,8 +180,7 @@ function play(delta) {
                                     {
                                         deleteWall(id);
                                         physicsDeleteWall(id);
-                                        deleteShadow(id);
-                                        for (let yy = -1; yy <= 1; yy++)
+                                       for (let yy = -1; yy <= 1; yy++)
                                         {
                                             for (let xx = -1; xx <= 1; xx++)
                                             {
@@ -144,7 +200,6 @@ function play(delta) {
                                     if (isDefined(gameObject.floor[id]))
                                     {
                                         deleteFloor(id);
-                                        deleteShadow(id);
                                         for (let yy = -1; yy <= 1; yy++)
                                         {
                                             for (let xx = -1; xx <= 1; xx++)
@@ -229,115 +284,123 @@ function play(delta) {
 
 function updatePlayerPos(id)
 {
-    if (!isDefined(players))
+    if (id === playerID)
         return;
-    if (players[id].forwards)
+    physics.player.body[id].velocity = [Math.cos(players[id].momentumDir) * players[id].currentSpeed, Math.sin(players[id].momentumDir) * players[id].currentSpeed];
+}
+
+function updateLocalPlayerPos()
+{
+    let id = playerID;
+    if (!isDefined(localPlayer))
+        return;
+    if (localPlayer.forwards)
     {
-        players[id].backwardsSpeed -= players[id].backwardsAcceleration / FPS;
-        if (players[id].backwardsSpeed < 0)
-            players[id].backwardsSpeed = 0;
-        players[id].forwardsSpeed += players[id].forwardsAcceleration / FPS;
-        if (players[id].forwardsSpeed > players[id].forwardsMaxSpeed)
-            players[id].forwardsSpeed = players[id].forwardsMaxSpeed;
+        localPlayer.backwardsSpeed -= localPlayer.backwardsAcceleration / FPS;
+        if (localPlayer.backwardsSpeed < 0)
+            localPlayer.backwardsSpeed = 0;
+        localPlayer.forwardsSpeed += localPlayer.forwardsAcceleration / FPS;
+        if (localPlayer.forwardsSpeed > localPlayer.forwardsMaxSpeed)
+            localPlayer.forwardsSpeed = localPlayer.forwardsMaxSpeed;
     } else {
-        players[id].forwardsSpeed -= players[id].forwardsDeAcceleration / FPS;
-        if (players[id].forwardsSpeed < 0)
-            players[id].forwardsSpeed = 0;
+        localPlayer.forwardsSpeed -= localPlayer.forwardsDeAcceleration / FPS;
+        if (localPlayer.forwardsSpeed < 0)
+            localPlayer.forwardsSpeed = 0;
     }
 
-    if (players[id].backwards)
+    if (localPlayer.backwards)
     {
-        players[id].forwardsSpeed -= players[id].forwardsAcceleration / FPS;
-        if (players[id].forwardsSpeed < 0)
-            players[id].forwardsSpeed = 0;
-        players[id].backwardsSpeed += players[id].backwardsAcceleration / FPS;
-        if (players[id].backwardsSpeed > players[id].backwardsMaxSpeed)
-            players[id].backwardsSpeed = players[id].backwardsMaxSpeed;
+        localPlayer.forwardsSpeed -= localPlayer.forwardsAcceleration / FPS;
+        if (localPlayer.forwardsSpeed < 0)
+            localPlayer.forwardsSpeed = 0;
+        localPlayer.backwardsSpeed += localPlayer.backwardsAcceleration / FPS;
+        if (localPlayer.backwardsSpeed > localPlayer.backwardsMaxSpeed)
+            localPlayer.backwardsSpeed = localPlayer.backwardsMaxSpeed;
     } else {
-        players[id].backwardsSpeed -= players[id].backwardsDeAcceleration / FPS;
-        if (players[id].backwardsSpeed < 0)
-            players[id].backwardsSpeed = 0;
+        localPlayer.backwardsSpeed -= localPlayer.backwardsDeAcceleration / FPS;
+        if (localPlayer.backwardsSpeed < 0)
+            localPlayer.backwardsSpeed = 0;
     }
 
-    if (players[id].strafeLeft)
+    if (localPlayer.strafeLeft)
     {
-        players[id].strafeRightSpeed -= players[id].strafeAcceleration / FPS;
-        if (players[id].strafeRightSpeed < 0)
-            players[id].strafeRightSpeed = 0;
-        players[id].strafeLeftSpeed += players[id].strafeAcceleration / FPS;
-        if (players[id].strafeLeftSpeed > players[id].strafeMaxSpeed)
-            players[id].strafeLeftSpeed = players[id].strafeMaxSpeed;
+        localPlayer.strafeRightSpeed -= localPlayer.strafeAcceleration / FPS;
+        if (localPlayer.strafeRightSpeed < 0)
+            localPlayer.strafeRightSpeed = 0;
+        localPlayer.strafeLeftSpeed += localPlayer.strafeAcceleration / FPS;
+        if (localPlayer.strafeLeftSpeed > localPlayer.strafeMaxSpeed)
+            localPlayer.strafeLeftSpeed = localPlayer.strafeMaxSpeed;
     } else {
-        players[id].strafeLeftSpeed -= players[id].strafeDeAcceleration / FPS;
-        if (players[id].strafeLeftSpeed < 0)
-            players[id].strafeLeftSpeed = 0;
+        localPlayer.strafeLeftSpeed -= localPlayer.strafeDeAcceleration / FPS;
+        if (localPlayer.strafeLeftSpeed < 0)
+            localPlayer.strafeLeftSpeed = 0;
     }
 
-    if (players[id].strafeRight)
+    if (localPlayer.strafeRight)
     {
-        players[id].strafeLeftSpeed -= players[id].strafeAcceleration / FPS;
-        if (players[id].strafeLeftSpeed < 0)
-            players[id].strafeLeftSpeed = 0;
-        players[id].strafeRightSpeed += players[id].strafeAcceleration / FPS;
-        if (players[id].strafeRightSpeed > players[id].strafeMaxSpeed)
-            players[id].strafeRightSpeed = players[id].strafeMaxSpeed;
+        localPlayer.strafeLeftSpeed -= localPlayer.strafeAcceleration / FPS;
+        if (localPlayer.strafeLeftSpeed < 0)
+            localPlayer.strafeLeftSpeed = 0;
+        localPlayer.strafeRightSpeed += localPlayer.strafeAcceleration / FPS;
+        if (localPlayer.strafeRightSpeed > localPlayer.strafeMaxSpeed)
+            localPlayer.strafeRightSpeed = localPlayer.strafeMaxSpeed;
     } else {
-        players[id].strafeRightSpeed -= players[id].strafeDeAcceleration / FPS;
-        if (players[id].strafeRightSpeed < 0)
-            players[id].strafeRightSpeed = 0;
+        localPlayer.strafeRightSpeed -= localPlayer.strafeDeAcceleration / FPS;
+        if (localPlayer.strafeRightSpeed < 0)
+            localPlayer.strafeRightSpeed = 0;
     }
 
     let speedVector;
     let theta;
     let vectorSpeed;
-    if (players[id].forwardsSpeed > 0)
+    if (localPlayer.forwardsSpeed > 0)
     {
-        if (players[id].strafeLeftSpeed > 0)
+        if (localPlayer.strafeLeftSpeed > 0)
         {
             // forwards and left
-            speedVector = {x: players[id].forwardsSpeed, y: players[id].strafeLeftSpeed};
+            speedVector = {x: localPlayer.forwardsSpeed, y: localPlayer.strafeLeftSpeed};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
-        } else if (players[id].strafeRightSpeed > 0)
+        } else if (localPlayer.strafeRightSpeed > 0)
         {
             // forwards and right
-            speedVector = {x: players[id].forwardsSpeed, y: -players[id].strafeRightSpeed};
+            speedVector = {x: localPlayer.forwardsSpeed, y: -localPlayer.strafeRightSpeed};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
         } else {
             // forwards only
-            speedVector = {x: players[id].forwardsSpeed, y: 0};
+            speedVector = {x: localPlayer.forwardsSpeed, y: 0};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
         }
-    } else if (players[id].backwardsSpeed > 0)
+    } else if (localPlayer.backwardsSpeed > 0)
     {
-        if (players[id].strafeLeftSpeed > 0)
+        if (localPlayer.strafeLeftSpeed > 0)
         {
             // backwards and left
-            speedVector = {x: -players[id].backwardsSpeed, y: players[id].strafeLeftSpeed};
+            speedVector = {x: -localPlayer.backwardsSpeed, y: localPlayer.strafeLeftSpeed};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
-        } else if (players[id].strafeRightSpeed > 0)
+        } else if (localPlayer.strafeRightSpeed > 0)
         {
             // backwards and right
-            speedVector = {x: -players[id].backwardsSpeed, y: -players[id].strafeRightSpeed};
+            speedVector = {x: -localPlayer.backwardsSpeed, y: -localPlayer.strafeRightSpeed};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
         } else {
             // backwards only
-            speedVector = {x: -players[id].backwardsSpeed, y: 0};
+            speedVector = {x: -localPlayer.backwardsSpeed, y: 0};
             vectorSpeed = distance(speedVector);
             theta = angle(speedVector);
         }
-    } else if (players[id].strafeLeftSpeed > 0)
+    } else if (localPlayer.strafeLeftSpeed > 0)
     {
-        speedVector = {x: 0, y: players[id].strafeLeftSpeed};
+        speedVector = {x: 0, y: localPlayer.strafeLeftSpeed};
         vectorSpeed = distance(speedVector);
         theta = angle(speedVector);
-    } else if (players[id].strafeRightSpeed > 0)
+    } else if (localPlayer.strafeRightSpeed > 0)
     {
-        speedVector = {x: 0, y: -players[id].strafeRightSpeed};
+        speedVector = {x: 0, y: -localPlayer.strafeRightSpeed};
         vectorSpeed = distance(speedVector);
         theta = angle(speedVector);
     } else {
@@ -346,57 +409,52 @@ function updatePlayerPos(id)
         theta = 0;
     }
 
-    players[id].momentumDir = convRad(physics.player.body[id].angle + theta);
+    localPlayer.momentumDir = convRad(physics.player.body[playerID].angle + theta);
 
     let runBonus = 1;
-    if (players[id].isRunning)
+    if (localPlayer.isRunning)
     {
-        if (players[id].forwards)
+        if (localPlayer.forwards)
         {
-            runBonus = players[id].runBonusSpeed;
-            players[id].runBonusSpeed *= players[id].runBonusSpeedIncMulti;
-            if (players[id].runBonusSpeed >= players[id].runMaxBonusSpeed)
-                players[id].runBonusSpeed = players[id].runMaxBonusSpeed;
-            if (players[id].strafeLeft || players[id].strafeRight)
+            runBonus = localPlayer.runBonusSpeed;
+            localPlayer.runBonusSpeed *= localPlayer.runBonusSpeedIncMulti;
+            if (localPlayer.runBonusSpeed >= localPlayer.runMaxBonusSpeed)
+                localPlayer.runBonusSpeed = localPlayer.runMaxBonusSpeed;
+            if (localPlayer.strafeLeft || localPlayer.strafeRight)
             {
-                runBonus = players[id].runBonusSpeed;
-                players[id].runBonusSpeed *= players[id].runBonusSpeedIncMulti;
-                if (players[id].runBonusSpeed >= players[id].runMaxBonusSpeed)
-                    players[id].runBonusSpeed = players[id].runMaxBonusSpeed;
+                runBonus = localPlayer.runBonusSpeed;
+                localPlayer.runBonusSpeed *= localPlayer.runBonusSpeedIncMulti;
+                if (localPlayer.runBonusSpeed >= localPlayer.runMaxBonusSpeed)
+                    localPlayer.runBonusSpeed = localPlayer.runMaxBonusSpeed;
             }
-        } else if (players[id].strafeLeft || players[id].strafeRight)
+        } else if (localPlayer.strafeLeft || localPlayer.strafeRight)
         {
-            runBonus = players[id].runBonusSpeed;
-            players[id].runBonusSpeed *= players[id].runBonusSpeedIncMulti;
-            if (players[id].runBonusSpeed > players[id].runMaxBonusSpeed)
-                players[id].runBonusSpeed = players[id].runMaxBonusSpeed;
+            runBonus = localPlayer.runBonusSpeed;
+            localPlayer.runBonusSpeed *= localPlayer.runBonusSpeedIncMulti;
+            if (localPlayer.runBonusSpeed > localPlayer.runMaxBonusSpeed)
+                localPlayer.runBonusSpeed = localPlayer.runMaxBonusSpeed;
         }
-    } else if (players[id].isTipToe)
+    } else if (localPlayer.isTipToe)
     {
-        runBonus = players[id].runBonusSpeed;
-        players[id].runBonusSpeed /= players[id].runBonusSpeedIncMulti;
-        if (players[id].runBonusSpeed < players[id].runMinBonusSpeed / 2)
-            players[id].runBonusSpeed = players[id].runMinBonusSpeed / 2;
+        runBonus = localPlayer.runBonusSpeed;
+        localPlayer.runBonusSpeed /= localPlayer.runBonusSpeedIncMulti;
+        if (localPlayer.runBonusSpeed < localPlayer.runMinBonusSpeed / 2)
+            localPlayer.runBonusSpeed = localPlayer.runMinBonusSpeed / 2;
     } else {
-        runBonus = players[id].runBonusSpeed;
-        if (players[id].runBonusSpeed < 1)
+        runBonus = localPlayer.runBonusSpeed;
+        if (localPlayer.runBonusSpeed < 1)
         {
-            players[id].runBonusSpeed *= players[id].runBonusSpeedIncMulti * 2;
-            if (players[id].runBonusSpeed > players[id].runMinBonusSpeed)
-                players[id].runBonusSpeed = players[id].runMinBonusSpeed;
-        } else if (players[id].runBonusSpeed > 1)
+            localPlayer.runBonusSpeed *= localPlayer.runBonusSpeedIncMulti * 2;
+            if (localPlayer.runBonusSpeed > localPlayer.runMinBonusSpeed)
+                localPlayer.runBonusSpeed = localPlayer.runMinBonusSpeed;
+        } else if (localPlayer.runBonusSpeed > 1)
         {
-            players[id].runBonusSpeed /= players[id].runBonusSpeedIncMulti * 2;
-            if (players[id].runBonusSpeed < players[id].runMinBonusSpeed)
-                players[id].runBonusSpeed = players[id].runMinBonusSpeed;
+            localPlayer.runBonusSpeed /= localPlayer.runBonusSpeedIncMulti * 2;
+            if (localPlayer.runBonusSpeed < localPlayer.runMinBonusSpeed)
+                localPlayer.runBonusSpeed = localPlayer.runMinBonusSpeed;
         }
     }
 
-    players[id].currentSpeed = vectorSpeed * runBonus;
-    players[id].body.position = [physics.player.body[id].position[0], physics.player.body[id].position[1]];
-    players[id].body.angle = physics.player.body[id].angle;
-    players[id].chunkPos = calcChunkPos(players[id].body.position, gridSize);
-    physics.player.body[id].velocity = [Math.cos(players[id].momentumDir) * players[id].currentSpeed, Math.sin(players[id].momentumDir) * players[id].currentSpeed];
-    players[id].body.velocity = physics.player.body[id].velocity;
-    players[id].body.angularVelocity = physics.player.body[id].angularVelocity;
+    localPlayer.currentSpeed = vectorSpeed * runBonus;
+    physics.player.body[id].velocity = [Math.cos(localPlayer.momentumDir) * localPlayer.currentSpeed, Math.sin(localPlayer.momentumDir) * localPlayer.currentSpeed];
 }

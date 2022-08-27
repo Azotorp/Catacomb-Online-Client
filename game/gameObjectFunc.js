@@ -24,6 +24,8 @@ function createPlayer(id)
         gameObject.player[id].uuid = players[id].uuid;
         gameObject.debugPlayerHudLayer[id] = new Container();
 
+
+
         gameObject.debugPlayerHud[id] = new Text("", debugHudTextStyle);
         gameObject.debugPlayerHud[id].scale.x = 1;
         gameObject.debugPlayerHud[id].scale.y = -1;
@@ -40,17 +42,78 @@ function createPlayer(id)
             gameObject.playerFOVScanMask.scale.x = 1;
             gameObject.playerFOVScanMask.scale.y = -1;
             gameObject.playerFOVScanMaskLayer.addChild(gameObject.playerFOVScanMask);
-            //gameObject.playerFOVScanMask.filters = [applyBlurFilter(50)];
-            //gameObject.worldLayer.addChild(gameObject.playerFOVScanMask);
+            //gameObject.playerFOVScanMask.filters = [applyBlurFilter(10)];
             gameObject.catacombLayer.mask = gameObject.playerFOVScanMaskLayer;
+            gameObject.playerMousePointer = new Graphics();
+            gameObject.playerMousePointer.scale.x = 1;
+            gameObject.playerMousePointer.scale.y = -1;
+            gameObject.playerCrosshair = new Graphics();
+            gameObject.playerCrosshair.scale.x = 1;
+            gameObject.playerCrosshair.scale.y = -1;
+
+            let thisOuterCrossHairSize = 75;
+            let thisMiddleCrossHairSize = 40;
+            let thisInnerCrossHairSize = 25;
+            drawLine(gameObject.playerCrosshair, -thisOuterCrossHairSize, 0, -thisMiddleCrossHairSize, 0, defaultLaserDotColor, 1, 1, true);
+            drawLine(gameObject.playerCrosshair, thisOuterCrossHairSize, 0, thisMiddleCrossHairSize, 0, defaultLaserDotColor, 1, 1);
+            drawLine(gameObject.playerCrosshair, 0, -thisOuterCrossHairSize, 0, -thisMiddleCrossHairSize, defaultLaserDotColor, 1, 1);
+            drawLine(gameObject.playerCrosshair, 0, thisOuterCrossHairSize, 0, thisMiddleCrossHairSize, defaultLaserDotColor, 1, 1);
+            drawLine(gameObject.playerCrosshair, -thisMiddleCrossHairSize, 0, -thisInnerCrossHairSize, 0, defaultLaserDotColor, 1, 0.5);
+            drawLine(gameObject.playerCrosshair, thisMiddleCrossHairSize, 0, thisInnerCrossHairSize, 0, defaultLaserDotColor, 1, 0.5);
+            drawLine(gameObject.playerCrosshair, 0, -thisMiddleCrossHairSize, 0, -thisInnerCrossHairSize, defaultLaserDotColor, 1, 0.5);
+            drawLine(gameObject.playerCrosshair, 0, thisMiddleCrossHairSize, 0, thisInnerCrossHairSize, defaultLaserDotColor, 1, 0.5);
+            drawCircle(gameObject.playerMousePointer, 0, 0, 15, 0x000000, 5, 1, 0xffffff, 0.5, true);
+
+            gameObject.worldLayer.addChild(gameObject.playerCrosshair);
+            gameObject.worldLayer.addChild(gameObject.playerMousePointer);
         }
 
+        gameObject.playerPosCheck[id] = new Graphics();
+        gameObject.playerPosCheck[id].scale.x = 1;
+        gameObject.playerPosCheck[id].scale.y = 1;
+        gameObject.worldLayer.addChild(gameObject.playerPosCheck[id]);
+
         gameObject.player[id].playerID = players[id].playerID;
+        gameObject.player[id].animationSpeed = 0.25;
         gameObject.player[id].play();
+
         gameObject.playerLayer.addChild(gameObject.player[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordAvatar[id]);
         gameObject.playerLayer.addChild(gameObject.playerDiscordUsername[id]);
         gameObject.playerLayer.addChild(gameObject.debugPlayerHudLayer[id]);
+
+        gameObject.playerLaser[id] = {
+            dot: new Sprite(Resources.laserDot.texture),
+            beam: new Sprite(Resources.laserBeam.texture),
+            glow: new Sprite(Resources.laserGlow.texture),
+        };
+
+        gameObject.playerLaserLayer[id] = new Container();
+
+        gameObject.laserLayer.addChild(gameObject.playerLaserLayer[id]);
+        gameObject.laserLayer.addChild(gameObject.playerLaser[id].dot);
+        gameObject.playerLaserLayer[id].addChild(gameObject.playerLaser[id].beam);
+        gameObject.playerLaserLayer[id].addChild(gameObject.playerLaser[id].glow);
+
+        gameObject.playerLaser[id].dot.tint = defaultLaserDotColor;
+        gameObject.playerLaser[id].dot.scale.x = 0.25;
+        gameObject.playerLaser[id].dot.scale.y = -0.25;
+        gameObject.playerLaser[id].dot.anchor.x = 0.5;
+        gameObject.playerLaser[id].dot.anchor.y = 0.5;
+        gameObject.playerLaser[id].beam.tint = defaultLaserDotColor;
+        gameObject.playerLaser[id].beam.scale.x = 10;
+        gameObject.playerLaser[id].beam.scale.y = -0.5;
+        gameObject.playerLaser[id].beam.x = muzzlePosOffset.x * playerScale;
+        gameObject.playerLaser[id].beam.y = -muzzlePosOffset.y * playerScale;
+        gameObject.playerLaser[id].beam.anchor.x = 0;
+        gameObject.playerLaser[id].beam.anchor.y = 0.5;
+        gameObject.playerLaser[id].glow.tint = defaultLaserDotColor;
+        gameObject.playerLaser[id].glow.scale.x = 0.25;
+        gameObject.playerLaser[id].glow.scale.y = -0.25;
+        gameObject.playerLaser[id].glow.x = muzzlePosOffset.x * playerScale;
+        gameObject.playerLaser[id].glow.y = -muzzlePosOffset.y * playerScale;
+        gameObject.playerLaser[id].glow.anchor.x = 0.5;
+        gameObject.playerLaser[id].glow.anchor.y = 0.5;
         physicsAddPlayer(id);
     }
 }
@@ -116,21 +179,24 @@ function createShadow(id)
     if (!isDefined(gameObject.shadowOverlay[id]))
     {
         let chunkPos = getXYPos(id);
-        let type = mapData[id].shadow;
-        let rotation = mapData[id].shadowRotation;
-        if (type !== false && rotation !== false)
+        if (isDefined(mapData[id]))
         {
-            gameObject.shadowOverlay[id] = new Sprite(Resources[type + "Overlay"].texture);
-            let globalPos = calcGlobalPos(chunkPos, gridSize);
-            gameObject.shadowOverlay[id].anchor.x = 0.5;
-            gameObject.shadowOverlay[id].anchor.y = 0.5;
-            gameObject.shadowOverlay[id].x = globalPos.x;
-            gameObject.shadowOverlay[id].y = globalPos.y;
-            gameObject.shadowOverlay[id].rotation = toRad(rotation);
-            gameObject.shadowOverlay[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
-            gameObject.shadowOverlay[id].scale.x = gridSize / 1024;
-            gameObject.shadowOverlay[id].scale.y = -gridSize / 1024;
-            gameObject.shadowOverlayLayer.addChild(gameObject.shadowOverlay[id]);
+            let type = isDefined(mapData[id].shadow) ? mapData[id].shadow : false;
+            let rotation = isDefined(mapData[id].shadowRotation) ? mapData[id].shadowRotation : false;
+            if (type !== false && rotation !== false)
+            {
+                gameObject.shadowOverlay[id] = new Sprite(Resources[type + "Overlay"].texture);
+                let globalPos = calcGlobalPos(chunkPos, gridSize);
+                gameObject.shadowOverlay[id].anchor.x = 0.5;
+                gameObject.shadowOverlay[id].anchor.y = 0.5;
+                gameObject.shadowOverlay[id].x = globalPos.x;
+                gameObject.shadowOverlay[id].y = globalPos.y;
+                gameObject.shadowOverlay[id].rotation = toRad(rotation);
+                gameObject.shadowOverlay[id].chunkPos = {x: chunkPos.x, y: chunkPos.y};
+                gameObject.shadowOverlay[id].scale.x = gridSize / 1024;
+                gameObject.shadowOverlay[id].scale.y = -gridSize / 1024;
+                gameObject.shadowOverlayLayer.addChild(gameObject.shadowOverlay[id]);
+            }
         }
     }
 }
@@ -183,17 +249,27 @@ function deleteShadow(id)
 
 function deletePlayer(id)
 {
-    //gameObject.debugPlayerHudLayer[id].removeChild(gameObject.debugPlayerHud[id]);
+    gameObject.worldLayer.removeChild(gameObject.playerPosCheck[id]);
     gameObject.playerLayer.removeChild(gameObject.debugPlayerHudLayer[id]);
     gameObject.playerLayer.removeChild(gameObject.player[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordUsername[id]);
     gameObject.playerLayer.removeChild(gameObject.playerDiscordAvatar[id]);
+
+
+    //gameObject.playerLaserLayer[id].removeChild(gameObject.playerLaser[id].beam);
+    //gameObject.playerLaserLayer[id].removeChild(gameObject.playerLaser[id].glow);
+    gameObject.laserLayer.removeChild(gameObject.playerLaserLayer[id]);
+    gameObject.laserLayer.removeChild(gameObject.playerLaser[id].dot);
+
     physics.world.removeBody(physics.player.body[id]);
     delete gameObject.player[id];
+    delete gameObject.playerLaser[id];
+    delete gameObject.playerLaserLayer[id];
     delete gameObject.playerDiscordUsername[id];
     delete gameObject.playerDiscordAvatar[id];
     delete gameObject.debugPlayerHudLayer[id];
     delete gameObject.debugPlayerHud[id];
+    delete gameObject.playerPosCheck[id];
     delete physics.player.body[id];
     delete physics.player.shape[id];
 }
@@ -238,6 +314,41 @@ function deletePlayers()
         for (let id in gameObject.player)
         {
             deletePlayer(id);
+        }
+    }
+}
+
+function destroyWall()
+{
+    let xyKey = getXYKey(worldMouseChunkPos[playerID]);
+    dump(mapData[xyKey]);
+    if (isDefined(mapData[xyKey]))
+    {
+        let tile = mapData[xyKey].tile;
+        if (tile === "wall")
+        {
+            socket.emit("changeMap", {
+                xyKey: xyKey,
+                changeTo: "floor",
+                playerID: playerID,
+            });
+        }
+    }
+}
+
+function buildWall()
+{
+    let xyKey = getXYKey(worldMouseChunkPos[playerID]);
+    if (isDefined(mapData[xyKey]))
+    {
+        let tile = mapData[xyKey].tile;
+        if (tile === "floor")
+        {
+            socket.emit("changeMap", {
+                xyKey: xyKey,
+                changeTo: "wall",
+                playerID: playerID,
+            });
         }
     }
 }
