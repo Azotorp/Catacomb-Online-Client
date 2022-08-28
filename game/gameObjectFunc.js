@@ -38,12 +38,7 @@ function createPlayer(id)
 
         if (id === playerID)
         {
-            gameObject.playerFOVScanMask = new Graphics();
-            gameObject.playerFOVScanMask.scale.x = 1;
-            gameObject.playerFOVScanMask.scale.y = -1;
-            gameObject.playerFOVScanMaskLayer.addChild(gameObject.playerFOVScanMask);
-            //gameObject.playerFOVScanMask.filters = [applyBlurFilter(10)];
-            gameObject.catacombLayer.mask = gameObject.playerFOVScanMaskLayer;
+
             gameObject.playerMousePointer = new Graphics();
             gameObject.playerMousePointer.scale.x = 1;
             gameObject.playerMousePointer.scale.y = -1;
@@ -65,8 +60,22 @@ function createPlayer(id)
             drawCircle(gameObject.playerMousePointer, 0, 0, 15, 0x000000, 5, 1, 0xffffff, 0.5, true);
 
             gameObject.worldLayer.addChild(gameObject.playerCrosshair);
-            gameObject.worldLayer.addChild(gameObject.playerMousePointer);
+            gameObject.mousePointerLayer.addChild(gameObject.playerMousePointer);
+            gameObject.player[playerID].parentLayer = gameObject.yourPlayerLayer;
+            gameObject.mousePointerLayer.parentLayer = gameObject.aboveLOSLayer;
+            gameObject.playerLOSMask = new Graphics();
+            gameObject.playerLOSMask.scale.x = 1;
+            gameObject.playerLOSMask.scale.y = -1;
+            gameObject.playerLOSMaskLayer.addChild(gameObject.playerLOSMask);
+            gameObject.worldLayer.mask = gameObject.playerLOSMask;
+
         }
+        gameObject.playerLightMask[id] = new Graphics();
+        gameObject.playerLightMask[id].scale.x = 1;
+        gameObject.playerLightMask[id].scale.y = -1;
+        gameObject.playerLightMaskLayer.addChild(gameObject.playerLightMask[id]);
+        //gameObject.playerLightMask.filters = [applyBlurFilter(10)];
+        gameObject.catacombLayer.mask = gameObject.playerLightMaskLayer;
 
         gameObject.playerPosCheck[id] = new Graphics();
         gameObject.playerPosCheck[id].scale.x = 1;
@@ -94,6 +103,10 @@ function createPlayer(id)
         gameObject.laserLayer.addChild(gameObject.playerLaser[id].dot);
         gameObject.playerLaserLayer[id].addChild(gameObject.playerLaser[id].beam);
         gameObject.playerLaserLayer[id].addChild(gameObject.playerLaser[id].glow);
+
+        gameObject.playerLaser[id].dot.parentLayer = gameObject.globalLaserLayer;
+        gameObject.playerLaser[id].beam.parentLayer = gameObject.globalLaserLayer;
+        gameObject.playerLaser[id].glow.parentLayer = gameObject.globalLaserLayer;
 
         gameObject.playerLaser[id].dot.tint = defaultLaserDotColor;
         gameObject.playerLaser[id].dot.scale.x = 0.25;
@@ -260,6 +273,7 @@ function deletePlayer(id)
     //gameObject.playerLaserLayer[id].removeChild(gameObject.playerLaser[id].glow);
     gameObject.laserLayer.removeChild(gameObject.playerLaserLayer[id]);
     gameObject.laserLayer.removeChild(gameObject.playerLaser[id].dot);
+    gameObject.playerLightMaskLayer.removeChild(gameObject.playerLightMask[id]);
 
     physics.world.removeBody(physics.player.body[id]);
     delete gameObject.player[id];
@@ -270,6 +284,7 @@ function deletePlayer(id)
     delete gameObject.debugPlayerHudLayer[id];
     delete gameObject.debugPlayerHud[id];
     delete gameObject.playerPosCheck[id];
+    delete gameObject.playerLightMask[id];
     delete physics.player.body[id];
     delete physics.player.shape[id];
 }

@@ -46,7 +46,7 @@ let zoomMulti = 1.5, minZoom = -4, maxZoom = 12; // < 0 = zoom in
 let zoomStep = 0;
 let zoom = pow(zoomMulti, zoomStep);
 let localMousePos, worldMousePos, worldMouseChunkPos = {};
-
+let lightRayCastPath = {};
 let maxChunkRenderX = Math.ceil(((winCenterX * zoom) - (gridSize / 2)) / gridSize) + 1;
 let maxChunkRenderY = Math.ceil(((winCenterY * zoom) - (gridSize / 2)) / gridSize) + 1;
 
@@ -82,8 +82,10 @@ let gameObject = {
     playerDiscordAvatar: {},
     playerDiscordUsername: {},
     playerSheet: {},
-    playerFOVScanMask: {},
-    playerFOVMask: {},
+    playerLightMask: {},
+    playerLOSMask: {},
+    playerLOSMaskLayer: new Container(),
+    mousePointerLayer: new Container(),
     floor: {},
     wall: {},
     shadowOverlay: {},
@@ -104,10 +106,15 @@ let gameObject = {
     debugWorldHudLayer: new Container(),
     debugWallHudLayer: new Container(),
     debugFloorHudLayer: new Container(),
-    playerFOVScanMaskLayer: new Container(),
+    playerLightMaskLayer: new Container(),
+    atWorldLayer: new Container(),
     debugPlayerHudLayer: {},
     wallGrid: {},
     floorGrid: {},
+    yourPlayerLayer: new PIXI.display.Layer(),
+    globalLaserLayer: new PIXI.display.Layer(),
+    aboveLOSLayer: new PIXI.display.Layer(),
+    belowLOSLayer: new PIXI.display.Layer(),
 }
 
 const FLAG = {
@@ -141,11 +148,6 @@ let physics = {
     }),
 };
 
-let muzzlePosOffset = {
-    x: 96,
-    y: 16,
-};
-
 let serverOfflineErrorView = false;
 
-let laserRayCast = {};
+let laserTarget = {};

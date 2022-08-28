@@ -55,17 +55,20 @@ function play(delta) {
 
 
 
-                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0], players[id].body.position[1] - 50, players[id].body.position[0], players[id].body.position[1] + 50, 0x00ff00, 1, 1,true);
-                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0] - 50, players[id].body.position[1], players[id].body.position[0] + 50, players[id].body.position[1], 0x00ff00, 1, 1);
+                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0], players[id].body.position[1] - 50, players[id].body.position[0], players[id].body.position[1] + 50, 0xff0000, 2, 1,true);
+                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0] - 50, players[id].body.position[1], players[id].body.position[0] + 50, players[id].body.position[1], 0xff0000, 2, 1);
+                drawLine(gameObject.playerPosCheck[id], players[id].body.position[0], players[id].body.position[1], players[id].body.position[0] + cos(players[id].body.angle) * 50, players[id].body.position[1] + sin(players[id].body.angle) * 50, 0xaaaaff, 2, 1);
+                drawCircle(gameObject.playerPosCheck[id], players[id].laserTarget.position.x, players[id].laserTarget.position.y, 10, 0x990000, 1, 1, 0x990000, 0.75);
                 if (id === playerID)
                 {
                     gameObject.player[id].rotation = physics.referencePlayer.body.angle; // use a local angle to not get crazy jitters
                 } else {
                     gameObject.player[id].rotation = physics.player.body[id].angle;
                 }
+                let aim = gameObject.player[id].rotation;
                 gameObject.player[id].muzzleOrigin = {
-                    x: gameObject.player[id].x + (cos(gameObject.player[id].rotation) * muzzleOffset.length - cos(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width),
-                    y: gameObject.player[id].y + (sin(gameObject.player[id].rotation) * muzzleOffset.length - sin(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width)
+                    x: gameObject.player[id].x + (cos(aim) * muzzleOffset.length - cos(aim + toRad(90)) * muzzleOffset.width),
+                    y: gameObject.player[id].y + (sin(aim) * muzzleOffset.length - sin(aim + toRad(90)) * muzzleOffset.width)
                 };
                 let mousePos;
                 if (id === playerID)
@@ -73,28 +76,35 @@ function play(delta) {
                 else
                     mousePos = players[id].mouse;
                 let crossHairMousePos = {
-                    x: mousePos.x - cos(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width,
-                    y: mousePos.y - sin(gameObject.player[id].rotation + toRad(90)) * muzzleOffset.width,
+                    x: mousePos.x - cos(aim + toRad(90)) * muzzleOffset.width,
+                    y: mousePos.y - sin(aim + toRad(90)) * muzzleOffset.width,
                 };
                 let laserDistance = distance(gameObject.player[id].muzzleOrigin, crossHairMousePos);
-                //gameObject.playerLaser[id].beam.scale.x = laserDistance / 256;
                 let laserRayCastEndPos = {
-                    x: gameObject.player[id].muzzleOrigin.x + cos(gameObject.player[id].rotation) * laserDistance,
-                    y: gameObject.player[id].muzzleOrigin.y + sin(gameObject.player[id].rotation) * laserDistance,
+                    x: gameObject.player[id].muzzleOrigin.x + cos(aim) * laserDistance,
+                    y: gameObject.player[id].muzzleOrigin.y + sin(aim) * laserDistance,
                 };
                 laserDistance = distance(gameObject.player[id].muzzleOrigin, laserRayCastEndPos);
+                let rayCastResult = rayCast(gameObject.player[id].muzzleOrigin, laserRayCastEndPos);
+                laserDistance = distance(gameObject.player[id].muzzleOrigin, rayCastResult);
 
-                laserRayCast[id] = rayCast(gameObject.player[id].muzzleOrigin, laserRayCastEndPos);
-                laserDistance = distance(gameObject.player[id].muzzleOrigin, laserRayCast[id]);
+                laserTarget[id] = {
+                    aim: aim,
+                    distance: laserDistance,
+                    position: {
+                        x: rayCastResult.x,
+                        y: rayCastResult.y,
+                    },
+                    body: rayCastResult.body,
+                };
+
                 gameObject.playerLaser[id].beam.scale.x = laserDistance / 256;
-
-                gameObject.playerLaser[id].dot.position = laserRayCast[id];
-
+                gameObject.playerLaser[id].dot.position = laserTarget[id].position;
                 if (id === playerID)
                 {
-                    gameObject.playerCrosshair.position = laserRayCast[id];
+                    gameObject.playerCrosshair.position = laserTarget[id].position;
                     gameObject.playerMousePointer.position = crossHairMousePos;
-                    if (laserRayCast[id].body)
+                    if (laserTarget[id].body)
                     {
                         gameObject.playerMousePointer.visible = true;
                     } else {
@@ -103,12 +113,12 @@ function play(delta) {
                 }
                 gameObject.playerLaserLayer[id].x = gameObject.player[id].x;
                 gameObject.playerLaserLayer[id].y = gameObject.player[id].y;
-                gameObject.playerLaserLayer[id].rotation = gameObject.player[id].rotation;
+                gameObject.playerLaserLayer[id].rotation = aim;
                 gameObject.playerDiscordAvatar[id].x = gameObject.player[id].x;
-                gameObject.playerDiscordAvatar[id].y = (physics.player.body[id].angle >= 0 && toDeg(gameObject.player[id].rotation) <= 180) ? gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2) + Math.abs(Math.sin(gameObject.player[id].rotation) * (playerDim.x - avatarDim.y)) : gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2);
+                gameObject.playerDiscordAvatar[id].y = (physics.player.body[id].angle >= 0 && toDeg(aim) <= 180) ? gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2) + Math.abs(Math.sin(aim) * (playerDim.x - avatarDim.y)) : gameObject.player[id].y + 10 + (playerDim.y / 2) + (avatarDim.y / 2);
                 gameObject.playerDiscordUsername[id].x = gameObject.playerDiscordAvatar[id].x + (avatarDim.x / 2) + 10;
                 gameObject.playerDiscordUsername[id].y = gameObject.playerDiscordAvatar[id].y;
-                drawText(gameObject.debugPlayerHud[id], "FPS: "+FPS.toFixed(1)+" "+players[id].chunkPos[0]+" : "+players[id].chunkPos[1]+" ("+toDeg(players[id].body.angle).toFixed(0)+")", false, true);
+                drawText(gameObject.debugPlayerHud[id], "FPS: "+FPS.toFixed(1)+" "+players[id].chunkPos[0]+" : "+players[id].chunkPos[1]+" ("+toDeg(aim).toFixed(0)+")", false, true);
                 gameObject.debugPlayerHudLayer[id].position = gameObject.player[id].position;
                 if (id === playerID)
                 {
@@ -134,6 +144,22 @@ function play(delta) {
                 createPlayer(id);
             }
             updatePlayerPos(id);
+
+            lightRayCast(id, 60);
+            let path;
+            path = players[id].lightRayCastPath;
+            let polyPath = [];
+            //gameObject.playerLightMask[id].clear();
+            if (isDefined(path))
+            {
+                for (let p in path)
+                {
+                    polyPath.push(path[p].x);
+                    polyPath.push(path[p].y);
+                }
+                drawPoly(gameObject.playerLightMask[id], polyPath, 0xff0000, 1, 1, 0xff0000, 1, true);
+            }
+
         }
 
         if (playerID !== false)
@@ -244,18 +270,44 @@ function play(delta) {
                         deRenderTile: deRenderTile,
                         playerID: playerID,
                     });
+
+                    let path = players[playerID].wallLOSRayCastPath;
+                    let adjacentWalls = {};
+                    let polyPath = [];
+                    if (isDefined(path))
+                    {
+                        for (let p in path)
+                        {
+                            if (path[p].body && path[p].body.object === "wall")
+                            {
+                                let xyKey = path[p].body.objectID;
+                                adjacentWalls[xyKey] = path[p];
+                            }
+                            polyPath.push(path[p].x);
+                            polyPath.push(path[p].y);
+                        }
+                        drawPoly(gameObject.playerLOSMask, polyPath, 0xff0000, 1, 1, 0xff0000, 1, true);
+                        if (objLength(adjacentWalls) > 0)
+                        {
+                            //dump(adjacentWalls);
+                            for (let xyKey in adjacentWalls)
+                            {
+                                //dump(gameObject.wall[xyKey])
+                                if (isDefined(gameObject.wall[xyKey]))
+                                {
+                                    gameObject.wall[xyKey].parentLayer = gameObject.aboveLOSLayer;
+                                }
+                            }
+                        }
+                    }
+                    for (let xyKey in gameObject.wall)
+                    {
+                        if (!isDefined(adjacentWalls[xyKey]))
+                        {
+                            gameObject.wall[xyKey].parentLayer = gameObject.belowLOSLayer;
+                        }
+                    }
                 }
-            }
-            let path = players[playerID].fovScanPath;
-            let polyPath = [];
-            if (isDefined(path))
-            {
-                for (let p in path)
-                {
-                    polyPath.push(path[p].x);
-                    polyPath.push(path[p].y);
-                }
-                drawPoly(gameObject.playerFOVScanMask, polyPath, 0xff0000, 1, 1, 0xff0000, 1, true);
             }
 
             socket.emit("updateServer", {

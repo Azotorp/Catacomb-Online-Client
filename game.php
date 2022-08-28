@@ -16,6 +16,7 @@ if ($auth < $access_levels["Member"])
     header("Location: https://".FULLWEBPATH.LOGIN_PAGE);
     exit;
 }
+$muzzlePosOffset = explode(";", $settings["muzzlePosOffset"]);
 ?>
 
 <!DOCTYPE html>
@@ -107,6 +108,12 @@ if ($auth < $access_levels["Member"])
     const DISCORD_AVATAR = "<?php echo $discordAvatar; ?>";
     const socketIOHost = "<?php echo SOCKET_IO_HOST; ?>";
     const socketIOPort = "<?php echo SOCKET_IO_PORT; ?>";
+
+    let muzzlePosOffset = {
+        x: <?php echo $muzzlePosOffset[0]; ?>,
+        y: <?php echo $muzzlePosOffset[1]; ?>,
+    };
+
 </script>
 <script src="game/globals.js"></script>
 <script src="game/textStyles.js"></script>
@@ -115,8 +122,8 @@ if ($auth < $access_levels["Member"])
 <script src="game/keyBindings.js"></script>
 <script src="game/mouse.js"></script>
 <script src="game/setup.js"></script>
-<script src="game/main.js"></script>
 <script src="game/physics.js"></script>
+<script src="game/main.js"></script>
 <script src="game/socketEvents.js"></script>
 <script src="game/gameObjectFunc.js"></script>
 <script src="game/keyBindFunc.js"></script>

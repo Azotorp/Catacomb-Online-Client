@@ -78,7 +78,7 @@ function physicsDeleteWall(id)
     delete physics.wall.shape[id];
 }
 
-function rayCast(origin, endPos, collisionMask, skipBackTraces = true)
+function rayCast(origin, endPos, collisionMask, reverse = false, skipBackTraces = true)
 {
     let rayCast = {
         result: new p2.RaycastResult(),
@@ -96,20 +96,75 @@ function rayCast(origin, endPos, collisionMask, skipBackTraces = true)
     physics.world.raycast(rayCast.result, rayCast.rayClosest);
     rayCast.result.getHitPoint(rayCast.hitPoint, rayCast.rayClosest);
     //rayCast.result.reset();
+    let dir = 1;
+    if (reverse)
+        dir = -1;
     if (rayCast.result.body !== null)
     {
         return {
             x: rayCast.hitPoint[0],
-            y: rayCast.hitPoint[1],
+            y: rayCast.hitPoint[1] * dir,
             body: rayCast.result.body,
         };
     } else {
         return {
             x: endPos.x,
-            y: endPos.y,
+            y: endPos.y * dir,
             body: false,
         };
     }
+}
+
+function lightRayCast(id, fov)
+{
+    let aim = physics.player.body[id].angle;
+    let origin = {
+        x: physics.player.body[id].position[0],
+        y: physics.player.body[id].position[1],
+    };
+
+    let muzzleOffset = {
+        length: (muzzlePosOffset.x - 20) * playerScale,
+        width: muzzlePosOffset.y * playerScale,
+    };
+
+    let flashLightPos = {
+        x: physics.player.body[id].position[0] + Math.cos(aim) * muzzleOffset.length - Math.cos(aim + toRad(90)) * muzzleOffset.width,
+        y: physics.player.body[id].position[1] + Math.sin(aim) * muzzleOffset.length - Math.sin(aim + toRad(90)) * muzzleOffset.width,
+    };
+    
+    let halfFov = fov / 2;
+    lightRayCastPath[id] = [];
+    let angle = [];
+    let rays = 60;
+    let angleStep = fov / rays;
+    for (let f = 0; f < fov; f += angleStep)
+    {
+        let angle3 = aim + toRad(f) - (toRad(fov) / 2);
+        angle.push(angle3);
+    }
+    let angle3 = aim + toRad(fov) - (toRad(fov) / 2);
+    angle.push(angle3);
+    angle.sort((a, b) => {
+        return a - b;
+    });
+    let range = 850;
+    for (let a in angle)
+    {
+        let ad = toDeg(angleDist(angle[a], aim));
+        let rangeMod = 1;
+        if (ad > fov * 0.95)
+            rangeMod = 0.1;
+        let endPos = {
+            x: flashLightPos.x + Math.cos(angle[a]) * range * rangeMod,
+            y: flashLightPos.y + Math.sin(angle[a]) * range * rangeMod,
+        };
+        lightRayCastPath[id].push(rayCast(flashLightPos, endPos, FLAG.WALL, true));
+    }
+    lightRayCastPath[id].push({
+        x: flashLightPos.x,
+        y: -flashLightPos.y,
+    });
 }
 
 function getOutlinePath(obj, anchorRatio = {x: 0, y: 0})
